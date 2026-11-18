@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- [EDIT] サイトタイトルを変更してください -->
+  <title>スタートアップ支援・公募情報データベース</title>
+  <!-- [EDIT] サイトの説明文（検索エンジン・SNS共有用）を変更してください -->
+  <meta name="description" content="起業準備から資金調達・成長フェーズまで、公募・補助金・アクセラレーター情報を整理して掲載しています。">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="site-brand">
+        <!-- [EDIT] サイトのメインタイトルを変更してください -->
+        <h1 class="site-title">スタートアップ支援・公募情報データベース</h1>
+        <!-- [EDIT] サイトのサブタイトル・概要文を変更してください -->
+        <p class="site-subtitle">公募・補助金・アクセラレーター情報まとめ</p>
+      </div>
+      <div class="header-meta" aria-live="polite">
+        <span>最終更新:</span>
+        <time id="lastUpdatedText">-</time>
+      </div>
+    </div>
+  </header>
+
+  <main class="container main-content">
+    <!-- サンプルデータ表示時の案内バナー（DATA_ENDPOINT未設定時のみ表示） -->
+    <div id="demoBanner" class="notice-banner" hidden>
+      <p id="demoBannerText"></p>
+    </div>
+
+    <!-- 4フェーズ連動ジャーニーバー -->
+    <section class="phase-section" aria-label="創業フェーズ別フィルタ">
+      <div class="section-header-row">
+        <h2 class="section-label">フェーズから探す</h2>
+        <button type="button" id="clearPhaseBtn" class="text-btn" hidden>すべて表示</button>
+      </div>
+      <div id="phaseBar" class="phase-grid" role="group" aria-label="フェーズ選択"></div>
+    </section>
+
+    <!-- 検索・絞り込みコントロール -->
+    <section class="filter-section" aria-label="検索と絞り込み">
+      <div class="search-wrap">
+        <label for="searchInput" class="sr-only">キーワード検索</label>
+        <input
+          type="search"
+          id="searchInput"
+          class="search-input"
+          placeholder="プログラム名・実施機関・キーワードで検索..."
+          autocomplete="off"
+        >
+      </div>
+
+      <div class="filter-controls">
+        <div class="filter-group">
+          <span class="filter-group-label">ステータス</span>
+          <div id="statusFilters" class="chip-row" role="group" aria-label="ステータス絞り込み"></div>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">実施主体</span>
+          <div id="providerFilters" class="chip-row" role="group" aria-label="実施主体絞り込み"></div>
+        </div>
+        <button type="button" id="resetFiltersBtn" class="text-btn reset-btn" hidden>条件をリセット</button>
+      </div>
+    </section>
+
+    <!-- プログラム一覧 -->
+    <section class="results-section" aria-label="公募プログラム一覧">
+      <div class="results-header">
+        <h2 class="results-title">掲載プログラム</h2>
+        <span id="resultsCount" class="results-count">0件</span>
+      </div>
+
+      <!-- ローディングスケルトン -->
+      <div id="loadingState" class="card-grid" aria-busy="true" aria-label="読み込み中">
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+      </div>
+
+      <!-- エラー表示 -->
+      <div id="errorState" class="state-box" hidden>
+        <p class="state-title">データを読み込めませんでした</p>
+        <p id="errorMessage" class="state-desc"></p>
+        <button type="button" id="retryBtn" class="primary-btn">再読み込み</button>
+      </div>
+
+      <!-- 空状態表示 -->
+      <div id="emptyState" class="state-box" hidden>
+        <p class="state-title">条件に一致するプログラムが見つかりません</p>
+        <p class="state-desc">検索キーワードやフィルタ条件を変更してお試しください。</p>
+        <button type="button" id="emptyResetBtn" class="secondary-btn">絞り込みを解除</button>
+      </div>
+
+      <!-- カード一覧コンテナ -->
+      <div id="cardsContainer" class="card-grid" hidden></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <!-- [EDIT] フッターの注記を変更してください -->
+      <p class="footer-note">※ 本ページの情報は自動巡回により収集しているため、内容に誤りや変更が含まれる場合があります。正確な募集要項・最新情報は必ず各公式Webサイトをご確認ください。</p>
+      <!-- [EDIT] 運営者名・著作権表記を変更してください -->
+      <p class="footer-copy">&copy; Takeo FUJII 2026</p>
+    </div>
+  </footer>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理画面 | スタートアップ支援データベース</title>
+  <style>
+    :root {
+      --bg: #f6f6f4;
+      --surface: #ffffff;
+      --border: #e2e2dd;
+      --text: #1c1917;
+      --muted: #6b6862;
+      --accent: #2b5b6c;
+      --accent-hover: #214755;
+      --danger: #b91c1c;
+      --ok: #166534;
+      --warn: #b45309;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+    .header-actions { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+    main { max-width: 1120px; margin: 24px auto; padding: 0 20px; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 20px;
+    }
+    .auth-box { max-width: 440px; margin: 60px auto; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    .tab-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      padding: 6px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .tab-btn.active {
+      background: var(--surface);
+      border-color: var(--border);
+      color: var(--text);
+    }
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .toolbar-left { display: flex; gap: 8px; flex: 1; min-width: 240px; }
+    input[type="text"], input[type="password"], input[type="url"], select, textarea {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: inherit;
+      background: #fff;
+    }
+    button {
+      padding: 7px 13px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    button.primary:hover { background: var(--accent-hover); }
+    button.danger { color: var(--danger); border-color: #fecaca; }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { font-weight: 600; color: var(--muted); font-size: 12px; background: #fafaf8; }
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      background: #f9f9f7;
+    }
+    .badge.ok { color: var(--ok); border-color: #bbf7d0; background: #f0fdf4; }
+    .badge.warn { color: var(--warn); border-color: #fde68a; background: #fffbeb; }
+    .badge.err { color: var(--danger); border-color: #fecaca; background: #fef2f2; }
+    .muted { color: var(--muted); font-size: 12px; }
+    .status-banner {
+      padding: 10px 14px;
+      border-radius: 4px;
+      margin-bottom: 14px;
+      font-size: 13px;
+      border: 1px solid var(--border);
+      background: #fff;
+      display: none;
+    }
+    .status-banner.error { border-color: #fecaca; background: #fef2f2; color: var(--danger); }
+    .status-banner.success { border-color: #bbf7d0; background: #f0fdf4; color: var(--ok); }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 50;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border-radius: 6px;
+      width: 100%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 20px;
+      border: 1px solid var(--border);
+    }
+    .modal h2 { margin: 0 0 14px; font-size: 16px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-field { margin-bottom: 12px; }
+    .form-field.full { grid-column: 1 / -1; }
+    .form-field label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: var(--muted); }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+    .hidden { display: none !important; }
+    @media (max-width: 720px) {
+      .form-grid { grid-template-columns: 1fr; }
+      table { display: block; overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>スタートアップ支援データベース 管理画面</h1>
+    <div class="header-actions">
+      <span id="lastSyncLabel">最終巡回: -</span>
+      <button id="crawlBtn" class="hidden" onclick="runManualCrawl()">今すぐ巡回</button>
+      <button id="logoutBtn" class="hidden" onclick="logout()">ログアウト</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="banner" class="status-banner"></div>
+
+    <!-- 認証ゲート -->
+    <section id="authSection" class="card auth-box hidden">
+      <h2 style="margin-top:0; font-size:16px;">管理者認証</h2>
+      <p class="muted">
+        管理者トークン（<code>ADMIN_TOKEN</code>）を入力してください。<br>
+        未設定の場合は GAS エディタで <code>setupAdminAuth(email, token)</code> を実行してください。
+      </p>
+      <form onsubmit="submitLogin(event)">
+        <div class="form-field">
+          <label for="tokenInput">管理者トークン</label>
+          <input id="tokenInput" type="password" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="primary" style="width:100%;">ログイン</button>
+      </form>
+    </section>
+
+    <!-- 管理本体 -->
+    <section id="appSection" class="hidden">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="programs" onclick="switchTab('programs')">公募・支援プログラム</button>
+        <button class="tab-btn" data-tab="targets" onclick="switchTab('targets')">巡回ターゲット (CrawlTargets)</button>
+      </div>
+
+      <!-- Programs タブ -->
+      <div id="tab-programs" class="card">
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input id="searchProgramInput" type="text" placeholder="タイトル・機関名・メモで検索..." oninput="renderPrograms()">
+          </div>
+          <button class="primary" onclick="openProgramModal()">＋ 新規プログラム追加</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>タイトル / 機関</th>
+              <th>フェーズ</th>
+              <th>締切 / 状態</th>
+              <th>種別 / メモ</th>
+              <th style="width:120px;">操作</th>
+            </tr>
+          </thead>
+          <tbody id="programsBody"></tbody>
+        </table>
+      </div>
+
+      <!-- CrawlTargets タブ -->
+      <div id="tab-targets" class="card hidden">
+        <div class="toolbar">
+          <div class="muted">RSS / Atom / HTML ページを自動巡回します（active が有効な行のみ対象）。</div>
+          <button class="primary" onclick="openTargetModal()">＋ 巡回ターゲット追加</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>機関名 / URL</th>
+              <th>形式 / キーワード</th>
+              <th>有効</th>
+              <th>最終巡回 / ステータス</th>
+              <th style="width:120px;">操作</th>
+            </tr>
+          </thead>
+          <tbody id="targetsBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- プログラム編集モーダル -->
+  <div id="programModal" class="modal-backdrop">
+    <div class="modal">
+      <h2 id="programModalTitle">プログラム追加</h2>
+      <form onsubmit="saveProgram(event)">
+        <input type="hidden" id="p_id">
+        <input type="hidden" id="p_sourceType">
+        <div class="form-grid">
+          <div class="form-field full">
+            <label>タイトル *</label>
+            <input id="p_title" type="text" required>
+          </div>
+          <div class="form-field">
+            <label>実施機関</label>
+            <input id="p_org" type="text">
+          </div>
+          <div class="form-field">
+            <label>フェーズ</label>
+            <select id="p_phase">
+              <option value="p1">p1: アイデア・検証</option>
+              <option value="p2">p2: 起業準備</option>
+              <option value="p3">p3: 開発・実証</option>
+              <option value="p4">p4: 成長・資金調達</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>提供元種別</label>
+            <select id="p_providerType">
+              <option value="public">public (公的機関)</option>
+              <option value="private">private (民間/VC)</option>
+              <option value="municipality">municipality (自治体)</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>状態</label>
+            <select id="p_status">
+              <option value="open">open (募集中)</option>
+              <option value="closing_soon">closing_soon (締切間近)</option>
+              <option value="always">always (通年)</option>
+              <option value="closed">closed (終了)</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>支援金額</label>
+            <input id="p_amount" type="text" placeholder="例: 上限500万円">
+          </div>
+          <div class="form-field">
+            <label>締切 (YYYY-MM-DD 等)</label>
+            <input id="p_deadline" type="text" placeholder="例: 2026-08-31">
+          </div>
+          <div class="form-field full">
+            <label>対象 (カンマ区切り)</label>
+            <input id="p_targets" type="text" placeholder="researcher,student">
+          </div>
+          <div class="form-field full">
+            <label>公募 URL</label>
+            <input id="p_url" type="url" placeholder="https://...">
+          </div>
+          <div class="form-field full">
+            <label>概要（公開ページに表示）</label>
+            <textarea id="p_summary" rows="3"></textarea>
+          </div>
+          <div class="form-field full">
+            <label>管理用メモ（非公開・APIには出力されません）</label>
+            <textarea id="p_internalMemo" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" onclick="closeModal('programModal')">キャンセル</button>
+          <button type="submit" id="saveProgramBtn" class="primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 巡回ターゲット編集モーダル -->
+  <div id="targetModal" class="modal-backdrop">
+    <div class="modal">
+      <h2 id="targetModalTitle">巡回ターゲット追加</h2>
+      <form onsubmit="saveTarget(event)">
+        <input type="hidden" id="t_rowIndex">
+        <div class="form-grid">
+          <div class="form-field">
+            <label>機関名 *</label>
+            <input id="t_org" type="text" required>
+          </div>
+          <div class="form-field">
+            <label>形式 (type)</label>
+            <select id="t_type">
+              <option value="auto">auto (自動判定)</option>
+              <option value="rss">rss (RSS 2.0)</option>
+              <option value="atom">atom (Atom)</option>
+              <option value="html">html (Webページ)</option>
+            </select>
+          </div>
+          <div class="form-field full">
+            <label>URL *</label>
+            <input id="t_url" type="url" required placeholder="https://...">
+          </div>
+          <div class="form-field">
+            <label>初期フェーズ</label>
+            <select id="t_phase">
+              <option value="p1">p1</option>
+              <option value="p2">p2</option>
+              <option value="p3">p3</option>
+              <option value="p4">p4</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>提供元種別</label>
+            <select id="t_providerType">
+              <option value="public">public</option>
+              <option value="private">private</option>
+              <option value="municipality">municipality</option>
+            </select>
+          </div>
+          <div class="form-field full">
+            <label>抽出キーワード (カンマまたは | 区切り)</label>
+            <input id="t_keywords" type="text" placeholder="公募,スタートアップ,補助金">
+          </div>
+          <div class="form-field full">
+            <label>除外キーワード (カンマまたは | 区切り)</label>
+            <input id="t_excludeKeywords" type="text" placeholder="採用,調達結果,入札公告">
+          </div>
+          <div class="form-field full">
+            <label><input id="t_active" type="checkbox" checked style="width:auto;"> 有効にする</label>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" onclick="closeModal('targetModal')">キャンセル</button>
+          <button type="submit" id="saveTargetBtn" class="primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let state = {
+      token: sessionStorage.getItem('adminToken') || '',
+      programs: [],
+      targets: []
+    };
+
+    window.onload = function() {
+      loadAdminData();
+    };
+
+    function showBanner(msg, type) {
+      const el = document.getElementById('banner');
+      el.textContent = msg;
+      el.className = 'status-banner ' + (type || '');
+      el.style.display = 'block';
+    }
+
+    function hideBanner() {
+      document.getElementById('banner').style.display = 'none';
+    }
+
+    function loadAdminData() {
+      hideBanner();
+      google.script.run
+        .withSuccessHandler(function(res) {
+          applyAdminData(res);
+          document.getElementById('authSection').classList.add('hidden');
+          document.getElementById('appSection').classList.remove('hidden');
+          document.getElementById('crawlBtn').classList.remove('hidden');
+          if (res.authMethod === 'token') {
+            document.getElementById('logoutBtn').classList.remove('hidden');
+          }
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('appSection').classList.add('hidden');
+          document.getElementById('authSection').classList.remove('hidden');
+          if (state.token) {
+            showBanner(err.message || '認証に失敗しました', 'error');
+          }
+        })
+        .getAdminData(state.token);
+    }
+
+    function submitLogin(e) {
+      e.preventDefault();
+      state.token = document.getElementById('tokenInput').value.trim();
+      sessionStorage.setItem('adminToken', state.token);
+      loadAdminData();
+    }
+
+    function logout() {
+      state.token = '';
+      sessionStorage.removeItem('adminToken');
+      document.getElementById('tokenInput').value = '';
+      document.getElementById('appSection').classList.add('hidden');
+      document.getElementById('crawlBtn').classList.add('hidden');
+      document.getElementById('logoutBtn').classList.add('hidden');
+      document.getElementById('authSection').classList.remove('hidden');
+    }
+
+    function applyAdminData(res) {
+      state.programs = res.programs || [];
+      state.targets = res.targets || [];
+      document.getElementById('lastSyncLabel').textContent = '最終巡回: ' + (res.lastSync || '未実行');
+      renderPrograms();
+      renderTargets();
+    }
+
+    function switchTab(name) {
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.tab === name);
+      });
+      document.getElementById('tab-programs').classList.toggle('hidden', name !== 'programs');
+      document.getElementById('tab-targets').classList.toggle('hidden', name !== 'targets');
+    }
+
+    function renderPrograms() {
+      const q = document.getElementById('searchProgramInput').value.trim().toLowerCase();
+      const tbody = document.getElementById('programsBody');
+      tbody.textContent = '';
+
+      const filtered = state.programs.filter(p => {
+        if (!q) return true;
+        return [p.title, p.org, p.internalMemo, p.summary].some(v => String(v || '').toLowerCase().includes(q));
+      });
+
+      if (filtered.length === 0) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 5;
+        td.className = 'muted';
+        td.textContent = '該当するプログラムがありません。';
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+      }
+
+      filtered.forEach(p => {
+        const tr = document.createElement('tr');
+
+        const tdTitle = document.createElement('td');
+        const strong = document.createElement('div');
+        strong.style.fontWeight = '600';
+        strong.textContent = p.title || '(無題)';
+        const orgDiv = document.createElement('div');
+        orgDiv.className = 'muted';
+        orgDiv.textContent = p.org || '';
+        tdTitle.appendChild(strong);
+        tdTitle.appendChild(orgDiv);
+
+        const tdPhase = document.createElement('td');
+        tdPhase.textContent = p.phase || '-';
+
+        const tdStatus = document.createElement('td');
+        const stBadge = document.createElement('span');
+        const effStatus = p.computedStatus || p.status;
+        stBadge.className = 'badge ' + (effStatus === 'open' || effStatus === 'always' ? 'ok' : effStatus === 'closing_soon' ? 'warn' : 'err');
+        stBadge.textContent = effStatus;
+        const dlDiv = document.createElement('div');
+        dlDiv.className = 'muted';
+        dlDiv.textContent = p.deadline || '-';
+        tdStatus.appendChild(stBadge);
+        tdStatus.appendChild(dlDiv);
+
+        const tdMemo = document.createElement('td');
+        const srcBadge = document.createElement('span');
+        srcBadge.className = 'badge';
+        srcBadge.textContent = p.sourceType || 'manual';
+        const memoDiv = document.createElement('div');
+        memoDiv.className = 'muted';
+        memoDiv.textContent = p.internalMemo || '';
+        tdMemo.appendChild(srcBadge);
+        tdMemo.appendChild(memoDiv);
+
+        const tdActions = document.createElement('td');
+        const editBtn = document.createElement('button');
+        editBtn.textContent = '編集';
+        editBtn.style.marginRight = '4px';
+        editBtn.onclick = () => openProgramModal(p);
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '削除';
+        delBtn.className = 'danger';
+        delBtn.onclick = () => removeProgram(p.id, p.title);
+        tdActions.appendChild(editBtn);
+        tdActions.appendChild(delBtn);
+
+        tr.appendChild(tdTitle);
+        tr.appendChild(tdPhase);
+        tr.appendChild(tdStatus);
+        tr.appendChild(tdMemo);
+        tr.appendChild(tdActions);
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderTargets() {
+      const tbody = document.getElementById('targetsBody');
+      tbody.textContent = '';
+
+      if (state.targets.length === 0) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 5;
+        td.className = 'muted';
+        td.textContent = '巡回ターゲットが登録されていません。';
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+      }
+
+      state.targets.forEach(t => {
+        const tr = document.createElement('tr');
+
+        const tdOrg = document.createElement('td');
+        const orgDiv = document.createElement('div');
+        orgDiv.style.fontWeight = '600';
+        orgDiv.textContent = t.org || '';
+        const urlDiv = document.createElement('div');
+        urlDiv.className = 'muted';
+        urlDiv.style.wordBreak = 'break-all';
+        urlDiv.textContent = t.url || '';
+        tdOrg.appendChild(orgDiv);
+        tdOrg.appendChild(urlDiv);
+
+        const tdKw = document.createElement('td');
+        const typeBadge = document.createElement('span');
+        typeBadge.className = 'badge';
+        typeBadge.textContent = t.type || 'auto';
+        const kwDiv = document.createElement('div');
+        kwDiv.className = 'muted';
+        kwDiv.textContent = '含: ' + (t.keywords || '(デフォルト)');
+        tdKw.appendChild(typeBadge);
+        tdKw.appendChild(kwDiv);
+        if (t.excludeKeywords) {
+          const exDiv = document.createElement('div');
+          exDiv.className = 'muted';
+          exDiv.textContent = '除: ' + t.excludeKeywords;
+          tdKw.appendChild(exDiv);
+        }
+
+        const tdActive = document.createElement('td');
+        const toggleBtn = document.createElement('button');
+        toggleBtn.textContent = t.active ? '有効' : '停止中';
+        toggleBtn.className = t.active ? 'badge ok' : 'badge';
+        toggleBtn.onclick = () => toggleTargetActive(t);
+        tdActive.appendChild(toggleBtn);
+
+        const tdStat = document.createElement('td');
+        const fetchedDiv = document.createElement('div');
+        fetchedDiv.className = 'muted';
+        fetchedDiv.textContent = t.lastFetched || '未巡回';
+        const stDiv = document.createElement('div');
+        stDiv.textContent = t.lastStatus || '-';
+        tdStat.appendChild(fetchedDiv);
+        tdStat.appendChild(stDiv);
+        if (t.lastError) {
+          const errDiv = document.createElement('div');
+          errDiv.style.color = 'var(--danger)';
+          errDiv.style.fontSize = '11px';
+          errDiv.textContent = t.lastError;
+          tdStat.appendChild(errDiv);
+        }
+
+        const tdAct = document.createElement('td');
+        const editBtn = document.createElement('button');
+        editBtn.textContent = '編集';
+        editBtn.style.marginRight = '4px';
+        editBtn.onclick = () => openTargetModal(t);
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '削除';
+        delBtn.className = 'danger';
+        delBtn.onclick = () => removeTarget(t.rowIndex, t.org);
+        tdAct.appendChild(editBtn);
+        tdAct.appendChild(delBtn);
+
+        tr.appendChild(tdOrg);
+        tr.appendChild(tdKw);
+        tr.appendChild(tdActive);
+        tr.appendChild(tdStat);
+        tr.appendChild(tdAct);
+        tbody.appendChild(tr);
+      });
+    }
+
+    function openProgramModal(p) {
+      document.getElementById('programModalTitle').textContent = p ? 'プログラム編集' : '新規プログラム追加';
+      document.getElementById('p_id').value = p ? p.id : '';
+      document.getElementById('p_sourceType').value = p ? (p.sourceType || 'manual') : 'manual';
+      document.getElementById('p_title').value = p ? p.title : '';
+      document.getElementById('p_org').value = p ? p.org : '';
+      document.getElementById('p_phase').value = p ? (p.phase || 'p1') : 'p1';
+      document.getElementById('p_providerType').value = p ? (p.providerType || 'public') : 'public';
+      document.getElementById('p_status').value = p ? (p.status || 'open') : 'open';
+      document.getElementById('p_amount').value = p ? p.amount : '';
+      document.getElementById('p_deadline').value = p ? p.deadline : '';
+      document.getElementById('p_targets').value = p && Array.isArray(p.targets) ? p.targets.join(',') : 'researcher,student';
+      document.getElementById('p_url').value = p ? p.url : '';
+      document.getElementById('p_summary').value = p ? p.summary : '';
+      document.getElementById('p_internalMemo').value = p ? p.internalMemo : '';
+      document.getElementById('programModal').classList.add('open');
+    }
+
+    function saveProgram(e) {
+      e.preventDefault();
+      const btn = document.getElementById('saveProgramBtn');
+      btn.disabled = true;
+      btn.textContent = '保存中...';
+
+      const payload = {
+        id: document.getElementById('p_id').value,
+        sourceType: document.getElementById('p_sourceType').value,
+        title: document.getElementById('p_title').value,
+        org: document.getElementById('p_org').value,
+        phase: document.getElementById('p_phase').value,
+        providerType: document.getElementById('p_providerType').value,
+        status: document.getElementById('p_status').value,
+        amount: document.getElementById('p_amount').value,
+        deadline: document.getElementById('p_deadline').value,
+        targets: document.getElementById('p_targets').value.split(',').map(s => s.trim()).filter(Boolean),
+        url: document.getElementById('p_url').value,
+        summary: document.getElementById('p_summary').value,
+        internalMemo: document.getElementById('p_internalMemo').value
+      };
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.disabled = false;
+          btn.textContent = '保存';
+          closeModal('programModal');
+          applyAdminData(res);
+          showBanner('プログラムを保存しました。', 'success');
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.textContent = '保存';
+          showBanner(err.message || '保存に失敗しました。', 'error');
+        })
+        .saveProgramData(payload, state.token);
+    }
+
+    function removeProgram(id, title) {
+      if (!confirm('「' + title + '」を削除しますか？')) return;
+      google.script.run
+        .withSuccessHandler(function(res) {
+          applyAdminData(res);
+          showBanner('削除しました。', 'success');
+        })
+        .withFailureHandler(err => showBanner(err.message, 'error'))
+        .deleteProgramData(id, state.token);
+    }
+
+    function openTargetModal(t) {
+      document.getElementById('targetModalTitle').textContent = t ? '巡回ターゲット編集' : '巡回ターゲット追加';
+      document.getElementById('t_rowIndex').value = t ? t.rowIndex : '';
+      document.getElementById('t_org').value = t ? t.org : '';
+      document.getElementById('t_type').value = t ? (t.type || 'auto') : 'auto';
+      document.getElementById('t_url').value = t ? t.url : '';
+      document.getElementById('t_phase').value = t ? (t.phase || 'p2') : 'p2';
+      document.getElementById('t_providerType').value = t ? (t.providerType || 'public') : 'public';
+      document.getElementById('t_keywords').value = t ? t.keywords : '';
+      document.getElementById('t_excludeKeywords').value = t ? (t.excludeKeywords || '') : '';
+      document.getElementById('t_active').checked = t ? Boolean(t.active) : true;
+      document.getElementById('targetModal').classList.add('open');
+    }
+
+    function saveTarget(e) {
+      e.preventDefault();
+      const btn = document.getElementById('saveTargetBtn');
+      btn.disabled = true;
+      btn.textContent = '保存中...';
+
+      const payload = {
+        rowIndex: document.getElementById('t_rowIndex').value || null,
+        org: document.getElementById('t_org').value,
+        type: document.getElementById('t_type').value,
+        url: document.getElementById('t_url').value,
+        phase: document.getElementById('t_phase').value,
+        providerType: document.getElementById('t_providerType').value,
+        keywords: document.getElementById('t_keywords').value,
+        excludeKeywords: document.getElementById('t_excludeKeywords').value,
+        active: document.getElementById('t_active').checked
+      };
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.disabled = false;
+          btn.textContent = '保存';
+          closeModal('targetModal');
+          applyAdminData(res);
+          showBanner('巡回ターゲットを保存しました。', 'success');
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.textContent = '保存';
+          showBanner(err.message || '保存に失敗しました。', 'error');
+        })
+        .saveCrawlTarget(payload, state.token);
+    }
+
+    function toggleTargetActive(t) {
+      const updated = Object.assign({}, t, { active: !t.active });
+      google.script.run
+        .withSuccessHandler(res => applyAdminData(res))
+        .withFailureHandler(err => showBanner(err.message, 'error'))
+        .saveCrawlTarget(updated, state.token);
+    }
+
+    function removeTarget(rowIndex, org) {
+      if (!confirm('「' + org + '」を巡回ターゲットから削除しますか？')) return;
+      google.script.run
+        .withSuccessHandler(function(res) {
+          applyAdminData(res);
+          showBanner('ターゲットを削除しました。', 'success');
+        })
+        .withFailureHandler(err => showBanner(err.message, 'error'))
+        .deleteCrawlTarget(rowIndex, state.token);
+    }
+
+    function runManualCrawl() {
+      const btn = document.getElementById('crawlBtn');
+      btn.disabled = true;
+      btn.textContent = '巡回中...';
+      hideBanner();
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.disabled = false;
+          btn.textContent = '今すぐ巡回';
+          applyAdminData(res);
+          const cr = res.crawlResult || {};
+          if (cr.skipped) {
+            showBanner('他の巡回処理が実行中のためスキップされました。', 'error');
+          } else {
+            showBanner('巡回完了: 新規検知 ' + (cr.addedCount || 0) + ' 件', 'success');
+          }
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.textContent = '今すぐ巡回';
+          showBanner(err.message || '巡回に失敗しました。', 'error');
+        })
+        .triggerManualCrawl(state.token);
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('open');
+    }
+  </script>
+</body>
+</html>

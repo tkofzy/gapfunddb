@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>大学発スタートアップ創業支援ポータル</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif; background-color: #f8fafc; }
+    .matrix-cell { transition: all 0.15s ease; }
+    .matrix-cell:hover { transform: translateY(-1px); }
+    .nav-active { border-bottom: 3px solid #3b82f6; color: #ffffff !important; font-weight: 700; }
+  </style>
+</head>
+<body class="text-slate-800 pb-16 min-h-screen flex flex-col">
+
+  <!-- サイト共通グローバルヘッダー＆ナビゲーション -->
+  <header class="bg-slate-900 text-white shadow-md sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="py-3 flex justify-between items-center border-b border-slate-800">
+        <div class="cursor-pointer flex items-center gap-3" onclick="navigateTo('home')">
+          <span class="bg-blue-600 text-white text-xs font-extrabold px-2.5 py-1 rounded">UNIVERSITY VENTURE PORTAL</span>
+          <span class="text-lg font-bold tracking-tight">大学発スタートアップ 創業前支援ポータル</span>
+        </div>
+        <div class="text-xs text-slate-400 hidden sm:block">
+          研究者・学生のための起業支援＆公募情報ゲートウェイ
+        </div>
+      </div>
+      <!-- 階層ナビゲーションメニュー -->
+      <nav class="flex space-x-6 text-xs font-medium text-slate-300 overflow-x-auto pt-1">
+        <button onclick="navigateTo('home')" id="nav-home" class="py-2.5 px-1 hover:text-white whitespace-nowrap nav-active">
+          🏠 トップページ
+        </button>
+        <button onclick="navigateTo('roadmap')" id="nav-roadmap" class="py-2.5 px-1 hover:text-white whitespace-nowrap">
+          🧭 1. 創業ロードマップ
+        </button>
+        <button onclick="navigateTo('database')" id="nav-database" class="py-2.5 px-1 hover:text-white whitespace-nowrap">
+          🗂️ 2. 支援プログラム・公募DB
+        </button>
+        <button onclick="navigateTo('procedures')" id="nav-procedures" class="py-2.5 px-1 hover:text-white whitespace-nowrap">
+          📝 3. 学内手続き・知財ガイド
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- パンくずリスト（下位ページ表示時のみ出現） -->
+  <div id="breadcrumbBar" class="bg-white border-b border-slate-200 hidden">
+    <div class="max-w-7xl mx-auto px-4 py-2 text-xs text-slate-500 flex items-center gap-2">
+      <button onclick="navigateTo('home')" class="hover:text-blue-600 hover:underline">🏠 ホーム（トップ）</button>
+      <span>›</span>
+      <span id="breadcrumbCurrent" class="font-bold text-slate-800"></span>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       【階層0：トップページ (Home)】 サイト全体のハブ画面
+       ========================================================= -->
+  <main id="view-home" class="max-w-7xl mx-auto px-4 mt-6 space-y-8 flex-1 w-full">
+    
+    <!-- ヒーローバナー -->
+    <section class="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white rounded-2xl p-6 sm:p-10 shadow-lg flex flex-col md:flex-row justify-between items-center gap-6">
+      <div class="space-y-3 max-w-2xl">
+        <span class="text-xs font-bold uppercase tracking-widest text-blue-400">Research & Student Entrepreneurship</span>
+        <h1 class="text-2xl sm:text-3xl font-extrabold leading-tight">研究成果とアイデアを社会へ実装する<br>創業前（プレシード）総合支援サイト</h1>
+        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+          技術シーズの発掘からPoC資金（GAPファンド）の獲得、学内知財・兼業手続き、法人設立まで。研究者と学生が創業までに踏むべきステップと、学外の最新支援プログラム情報を一元提供します。
+        </p>
+        <div class="pt-2 flex flex-wrap gap-3">
+          <button onclick="navigateTo('database')" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-5 py-3 rounded-xl shadow-md transition">
+            🗂️ 支援プログラム・公募DBを見る →
+          </button>
+          <button onclick="navigateTo('roadmap')" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white text-xs font-bold px-5 py-3 rounded-xl transition">
+            🧭 創業までの4フェーズを確認する
+          </button>
+        </div>
+      </div>
+      <!-- データベース稼働サマリーウィジェット -->
+      <div class="bg-white/10 backdrop-blur-sm border border-white/15 rounded-xl p-5 w-full md:w-72 space-y-3">
+        <div class="text-xs font-bold text-blue-300 flex justify-between items-center">
+          <span>📊 公募DB リアルタイム集計</span>
+          <span class="bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded text-[10px]">自動巡回中</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-center">
+          <div class="bg-slate-900/60 p-3 rounded-lg">
+            <div id="homeStatTotal" class="text-2xl font-extrabold text-white">-</div>
+            <div class="text-[11px] text-slate-400">掲載プログラム総数</div>
+          </div>
+          <div class="bg-slate-900/60 p-3 rounded-lg">
+            <div id="homeStatOpen" class="text-2xl font-extrabold text-emerald-400">-</div>
+            <div class="text-[11px] text-slate-400">現在公募中・締切間近</div>
+          </div>
+        </div>
+        <div class="text-[11px] text-slate-300 pt-1 border-t border-white/10">
+          最終巡回: <span id="homeLastSync" class="font-mono">-</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- コンテンツディレクトリ（下位ページへの案内カード） -->
+    <section class="space-y-3">
+      <h2 class="text-base font-bold text-slate-800">コンテンツ一覧（目的別メニュー）</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        
+        <!-- コンテンツ1：創業ロードマップ -->
+        <div onclick="navigateTo('roadmap')" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:border-blue-500 hover:shadow-md transition cursor-pointer flex flex-col justify-between space-y-4">
+          <div class="space-y-2">
+            <span class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2.5 py-1 rounded">Step-by-Step Guide</span>
+            <h3 class="text-base font-bold text-slate-900">1. 創業ロードマップ（4フェーズ）</h3>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              シーズ発掘からPoC、学内調整、法人登記までの段階別タスクを「研究者（教員・ポスドク）」と「学生」の属性別に整理した活動ガイドです。
+            </p>
+          </div>
+          <div class="text-xs font-bold text-blue-600 flex items-center justify-end">詳細ページへ →</div>
+        </div>
+
+        <!-- コンテンツ2：本件データベース -->
+        <div onclick="navigateTo('database')" class="bg-blue-50/60 p-5 rounded-xl shadow-sm border-2 border-blue-500 hover:shadow-md transition cursor-pointer flex flex-col justify-between space-y-4">
+          <div class="space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="bg-blue-600 text-white text-xs font-bold px-2.5 py-1 rounded">Main Database</span>
+              <span class="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">毎日自動更新</span>
+            </div>
+            <h3 class="text-base font-bold text-slate-900">2. 外部支援プログラム・公募DB</h3>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              JST・NEDO等の公的GAPファンド、広域PF・自治体、民間VCの支援プログラムを「フェーズ×提供主体マトリクス」で横断検索できるデータベースです。
+            </p>
+          </div>
+          <div class="text-xs font-bold text-blue-700 flex items-center justify-end">データベースを開く →</div>
+        </div>
+
+        <!-- コンテンツ3：学内手続き・知財ガイド（今後の拡張枠） -->
+        <div onclick="navigateTo('procedures')" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:border-blue-500 hover:shadow-md transition cursor-pointer flex flex-col justify-between space-y-4">
+          <div class="space-y-2">
+            <span class="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-1 rounded">University Rules</span>
+            <h3 class="text-base font-bold text-slate-900">3. 学内手続き・知財・兼業ガイド</h3>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              発明届の提出タイミング、特許ライセンス交渉、教職員の兼業承認・利益相反（COI）申請、大学発ベンチャー称号認定の手続きを解説します。
+            </p>
+          </div>
+          <div class="text-xs font-bold text-blue-600 flex items-center justify-end">詳細ページへ →</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- トップページ上の新着・募集中の公募ピックアップ（下位DBと自動連動） -->
+    <section class="bg-white rounded-xl p-5 shadow-sm border border-slate-200 space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <div>
+          <h2 class="text-sm font-bold text-slate-800">📢 現在公募中・締切間近の注目プログラム（公募DBより抜粋）</h2>
+        </div>
+        <button onclick="navigateTo('database')" class="text-xs font-bold text-blue-600 hover:underline">
+          すべての公募・マトリクスを見る →
+        </button>
+      </div>
+      <div id="homePickupList" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- JSで公募DBから上位3件を自動表示 -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- =========================================================
+       【下位階層1：創業ロードマップ (/roadmap)】
+       ========================================================= -->
+  <main id="view-roadmap" class="max-w-7xl mx-auto px-4 mt-6 space-y-6 flex-1 w-full hidden">
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+      <div class="flex flex-wrap justify-between items-center gap-4 border-b pb-4">
+        <div>
+          <span class="text-xs font-bold text-indigo-600 uppercase">Step-by-Step Roadmap</span>
+          <h1 class="text-xl font-bold text-slate-900 mt-0.5">研究者・学生別 創業までの4フェーズ活動ステップ</h1>
+        </div>
+        <button onclick="navigateTo('database')" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow">
+          🗂️ 各フェーズに対応する公募DBを検索する →
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="bg-slate-800 text-white">
+              <th class="p-3 w-44">フェーズ / 達成状態</th>
+              <th class="p-3">共通タスク</th>
+              <th class="p-3 bg-indigo-950">🔬 研究者（教員・ポスドク）の固有タスク</th>
+              <th class="p-3 bg-emerald-950">🎓 学生（学部生・院生）の固有タスク</th>
+              <th class="p-3 w-28 text-center">連動公募DB</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
+            <tr>
+              <td class="p-3 font-bold bg-slate-50">1. 発掘・課題設定<br><span class="text-[10px] font-normal text-slate-500">課題とコア技術の特定</span></td>
+              <td class="p-3">・初期仮説（リーンキャンバス）構築<br>・技術棚卸しと学内窓口への初回相談</td>
+              <td class="p-3 bg-indigo-50/40">・論文発表（公知化）前の発明届・知財相談<br>・自身の関与形態（CEO/CTO/顧問）の整理</td>
+              <td class="p-3 bg-emerald-50/40">・指導教員との合意と権利帰属の確認<br>・卒業要件と学業両立・休学計画の検討</td>
+              <td class="p-3 text-center"><button onclick="jumpToDbPhase('p1')" class="text-blue-600 font-bold hover:underline">Phase1の公募 ↗</button></td>
+            </tr>
+            <tr>
+              <td class="p-3 font-bold bg-slate-50">2. 実証・市場検証<br><span class="text-[10px] font-normal text-slate-500">ニーズ確認と試作完了</span></td>
+              <td class="p-3">・想定顧客ヒアリング（20〜50社）<br>・GAPファンド獲得とMVP/試作品開発</td>
+              <td class="p-3 bg-indigo-50/40">・客員起業家（EIR）等の経営人材探索<br>・他機関との共同研究契約・MTAの整理</td>
+              <td class="p-3 bg-emerald-50/40">・ビジコンやアクセラ参加による仲間集め<br>・不足スキルを補完する共同創業者の組成</td>
+              <td class="p-3 text-center"><button onclick="jumpToDbPhase('p2')" class="text-blue-600 font-bold hover:underline">Phase2の公募 ↗</button></td>
+            </tr>
+            <tr>
+              <td class="p-3 font-bold bg-slate-50">3. 計画・学内調整<br><span class="text-[10px] font-normal text-slate-500">資本政策と手続き合意</span></td>
+              <td class="p-3">・事業計画書と資本政策（Cap Table）作成<br>・創業者間契約と初期VC調達の交渉</td>
+              <td class="p-3 bg-indigo-50/40">・兼業承認・利益相反（COI）マネジメント申請<br>・知財ライセンス条件と施設利用契約の調整</td>
+              <td class="p-3 bg-emerald-50/40">・学位研究テーマと事業内容の切り分け合意<br>・フェローシップ受給要件や生活費の精査</td>
+              <td class="p-3 text-center"><button onclick="jumpToDbPhase('p3')" class="text-blue-600 font-bold hover:underline">Phase3の公募 ↗</button></td>
+            </tr>
+            <tr>
+              <td class="p-3 font-bold bg-slate-50">4. 法人設立<br><span class="text-[10px] font-normal text-slate-500">登記完了と初期稼働</span></td>
+              <td class="p-3">・定款作成と法人登記、法人口座開設<br>・大学発ベンチャー称号の申請</td>
+              <td class="p-3 bg-indigo-50/40">・大学との正式ライセンス契約・共同研究締結<br>・エフォート管理（勤務時間外活動記録）開始</td>
+              <td class="p-3 bg-emerald-50/40">・学籍手続き（休学届・進路届等）の提出<br>・自治体・民間の学生起業特典枠の申請</td>
+              <td class="p-3 text-center"><button onclick="jumpToDbPhase('p4')" class="text-blue-600 font-bold hover:underline">Phase4の公募 ↗</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- =========================================================
+       【下位階層2：本件データベース (/database)】
+       ========================================================= -->
+  <main id="view-database" class="max-w-7xl mx-auto px-4 mt-6 space-y-6 flex-1 w-full hidden">
+
+    <!-- 下位ページヘッダー＆管理操作バー -->
+    <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
+      <div>
+        <span class="text-xs font-bold text-blue-600 uppercase">Sub-Content / Grant & Support Database</span>
+        <h1 class="text-xl font-bold text-slate-900 mt-0.5">フェーズ×提供主体別 外部支援プログラム・公募データベース</h1>
+      </div>
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <div class="text-xs text-slate-600 bg-slate-100 px-3 py-2 rounded-lg border border-slate-200">
+          最終巡回同期: <span id="lastSyncText" class="font-mono font-bold text-emerald-700">読込中...</span>
+        </div>
+        <button onclick="triggerManualCrawl()" id="crawlBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3.5 py-2 rounded-lg shadow-sm transition">
+          🔄 今すぐ手動巡回
+        </button>
+        <button onclick="openModal()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3.5 py-2 rounded-lg shadow-sm transition">
+          ＋ 公募情報を任意追加
+        </button>
+      </div>
+    </section>
+
+    <!-- 絞り込みバー -->
+    <section class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="text-xs font-bold text-slate-500 mr-1">対象属性フィルタ:</span>
+        <button onclick="setTargetFilter('all')" id="btn-t-all" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-white">すべて表示</button>
+        <button onclick="setTargetFilter('researcher')" id="btn-t-researcher" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">🔬 研究者（教員・ポスドク）</button>
+        <button onclick="setTargetFilter('student')" id="btn-t-student" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">🎓 学生（学部・院生）</button>
+      </div>
+      <div class="flex items-center gap-3 flex-1 max-w-md">
+        <input type="text" id="searchInput" oninput="renderAll()" placeholder="プログラム名・機関名・キーワードで検索..." class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500">
+        <button onclick="resetFilters()" class="text-xs text-blue-600 hover:underline whitespace-nowrap font-semibold">フィルタ解除</button>
+      </div>
+    </section>
+
+    <!-- 4×3 インタラクティブ・マトリクス -->
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+        <h2 class="text-sm font-bold text-slate-700">フェーズ×提供主体マトリクス（セルをクリックして絞り込み）</h2>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-100 border-b border-slate-200 text-xs font-bold text-slate-700">
+              <th class="p-3 w-48 border-r border-slate-200">創業フェーズ ＼ 提供主体</th>
+              <th class="p-3 w-1/3 border-r border-slate-200 cursor-pointer hover:bg-slate-200" onclick="selectMatrix(null, 'public')">🏛️ 国・公的機関（JST/NEDO/AMED/IPA等）</th>
+              <th class="p-3 w-1/3 border-r border-slate-200 cursor-pointer hover:bg-slate-200" onclick="selectMatrix(null, 'municipality')">🏙️ 広域大学PF・自治体（GTIE/東京都等）</th>
+              <th class="p-3 w-1/3 cursor-pointer hover:bg-slate-200" onclick="selectMatrix(null, 'private')">🏢 民間（VC/インキュベーター/財団等）</th>
+            </tr>
+          </thead>
+          <tbody id="matrixBody" class="divide-y divide-slate-200 text-xs"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 公募カード一覧 -->
+    <section class="space-y-3">
+      <h2 class="text-base font-bold text-slate-800">該当プログラム一覧 (<span id="countText">0</span>件)</h2>
+      <div id="cardsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    </section>
+
+  </main>
+
+  <!-- =========================================================
+       【下位階層3：学内手続き・知財ガイド (/procedures) ※拡張用枠】
+       ========================================================= -->
+  <main id="view-procedures" class="max-w-7xl mx-auto px-4 mt-6 space-y-6 flex-1 w-full hidden">
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+      <span class="text-xs font-bold text-amber-600 uppercase">Internal Procedures & IP Rules</span>
+      <h1 class="text-xl font-bold text-slate-900">学内手続き・知財ライセンス・兼業マネジメント案内</h1>
+      <p class="text-xs text-slate-600 leading-relaxed">
+        ※このページは今後のコンテンツ拡充用テンプレート枠です。学内の発明届フォーム、利益相反（COI）自己申告スケジュール、大学発ベンチャー認定制度の要領リンクなどを順次掲載できます。
+      </p>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 text-xs">
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+          <div class="font-bold text-slate-900">💡 1. 発明届と知財帰属の確認</div>
+          <p class="text-slate-600">学会要旨提出やピッチ登壇の前に、必ず知財部門へ発明届を提出し、特許出願および実施許諾方針を確認してください。</p>
+        </div>
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+          <div class="font-bold text-slate-900">⚖️ 2. 兼業・利益相反（COI）申請</div>
+          <p class="text-slate-600">研究者がスタートアップの役員や技術顧問に就任する場合、または株式を保有する場合は事前の兼業許可とCOI審査が必要です。</p>
+        </div>
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+          <div class="font-bold text-slate-900">🏅 3. 大学発ベンチャー称号認定</div>
+          <p class="text-slate-600">法人登記後、所定の要件を満たす企業に対して大学発ベンチャーの称号を付与し、学内施設利用や広報面の支援を行います。</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 任意追加・編集モーダル -->
+  <div id="modalOverlay" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 class="text-base font-bold">公募情報の任意追加・編集</h3>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+      </div>
+      <input type="hidden" id="f_id">
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="font-bold block mb-1">プログラム名称 *</label>
+          <input type="text" id="f_title" class="w-full border rounded p-2">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="font-bold block mb-1">提供機関名 *</label>
+            <input type="text" id="f_org" class="w-full border rounded p-2">
+          </div>
+          <div>
+            <label class="font-bold block mb-1">公募ステータス</label>
+            <select id="f_status" class="w-full border rounded p-2">
+              <option value="open">公募中</option>
+              <option value="closing">締切間近</option>
+              <option value="upcoming">公募予定</option>
+              <option value="closed">終了</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="font-bold block mb-1">対象フェーズ *</label>
+            <select id="f_phase" class="w-full border rounded p-2">
+              <option value="p1">1. 発掘・課題設定</option>
+              <option value="p2">2. 実証・市場検証 (PoC)</option>
+              <option value="p3">3. 計画・学内調整</option>
+              <option value="p4">4. 法人設立</option>
+            </select>
+          </div>
+          <div>
+            <label class="font-bold block mb-1">提供主体区分 *</label>
+            <select id="f_provider" class="w-full border rounded p-2">
+              <option value="public">国・公的機関</option>
+              <option value="municipality">広域PF・自治体</option>
+              <option value="private">民間（VC・財団等）</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="font-bold block mb-1">支援規模・金額</label>
+            <input type="text" id="f_amount" class="w-full border rounded p-2">
+          </div>
+          <div>
+            <label class="font-bold block mb-1">公募締切日</label>
+            <input type="text" id="f_deadline" class="w-full border rounded p-2">
+          </div>
+        </div>
+        <div>
+          <label class="font-bold block mb-1">対象属性</label>
+          <div class="flex gap-4 mt-1">
+            <label class="flex items-center gap-1"><input type="checkbox" id="f_t_res" checked> 研究者（教員・ポスドク）</label>
+            <label class="flex items-center gap-1"><input type="checkbox" id="f_t_stu" checked> 学生（学部・院生）</label>
+          </div>
+        </div>
+        <div>
+          <label class="font-bold block mb-1">公式公募ページURL</label>
+          <input type="url" id="f_url" class="w-full border rounded p-2">
+        </div>
+        <div>
+          <label class="font-bold block mb-1">概要・ポイント</label>
+          <textarea id="f_summary" rows="2" class="w-full border rounded p-2"></textarea>
+        </div>
+        <div>
+          <label class="font-bold block mb-1 text-amber-700">学内連携メモ</label>
+          <input type="text" id="f_memo" class="w-full border border-amber-300 bg-amber-50 rounded p-2">
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-3 border-t">
+        <button onclick="closeModal()" class="px-4 py-2 text-xs font-bold bg-slate-100 rounded-lg">キャンセル</button>
+        <button onclick="submitForm()" id="saveBtn" class="px-4 py-2 text-xs font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-500">スプレッドシートに保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const INITIAL_PAGE = '<?= initialPage ?>' || 'home';
+    const PAGE_TITLES = {
+      home: 'トップページ',
+      roadmap: '1. 創業ロードマップ（4フェーズ）',
+      database: '2. 支援プログラム・公募DB',
+      procedures: '3. 学内手続き・知財ガイド'
+    };
+
+    const PHASES = [
+      { id: 'p1', name: '1. 発掘・課題設定', sub: 'Exploration' },
+      { id: 'p2', name: '2. 実証・市場検証', sub: 'PoC & Discovery' },
+      { id: 'p3', name: '3. 計画・学内調整', sub: 'Structuring' },
+      { id: 'p4', name: '4. 法人設立', sub: 'Incorporation' }
+    ];
+    const PROVIDERS = ['public', 'municipality', 'private'];
+
+    let allPrograms = [];
+    let filterPhase = null;
+    let filterProvider = null;
+    let filterTarget = 'all';
+
+    window.onload = function() {
+      navigateTo(INITIAL_PAGE);
+      google.script.run.withSuccessHandler(applyServerData).getPortalData();
+    };
+
+    // サイト内の階層切り替え処理
+    function navigateTo(pageId) {
+      ['home', 'roadmap', 'database', 'procedures'].forEach(id => {
+        document.getElementById('view-' + id).classList.toggle('hidden', id !== pageId);
+        document.getElementById('nav-' + id).classList.toggle('nav-active', id === pageId);
+      });
+
+      const bcBar = document.getElementById('breadcrumbBar');
+      if (pageId === 'home') {
+        bcBar.classList.add('hidden');
+      } else {
+        bcBar.classList.remove('hidden');
+        document.getElementById('breadcrumbCurrent').textContent = PAGE_TITLES[pageId] || '';
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ロードマップから特定フェーズで絞り込んだ状態のDBページへ遷移
+    function jumpToDbPhase(phaseId) {
+      filterPhase = phaseId;
+      filterProvider = null;
+      renderAll();
+      navigateTo('database');
+    }
+
+    function applyServerData(res) {
+      allPrograms = res.programs || [];
+      const syncStr = res.lastSync || '-';
+      document.getElementById('lastSyncText').textContent = syncStr;
+      document.getElementById('homeLastSync').textContent = syncStr;
+      document.getElementById('homeStatTotal').textContent = allPrograms.length;
+      document.getElementById('homeStatOpen').textContent = allPrograms.filter(i => i.status === 'open' || i.status === 'closing').length;
+      renderHomePickups();
+      renderAll();
+    }
+
+    // トップページ用の新着ピックアップ3件描画
+    function renderHomePickups() {
+      const openItems = allPrograms.filter(i => i.status === 'open' || i.status === 'closing').slice(0, 3);
+      const container = document.getElementById('homePickupList');
+      container.innerHTML = openItems.map(item => `
+        <div onclick="navigateTo('database')" class="p-4 rounded-xl border border-slate-200 hover:border-blue-400 bg-slate-50/50 cursor-pointer flex flex-col justify-between space-y-2 transition">
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">${item.status === 'closing' ? '締切間近' : '公募中'}</span>
+              <span class="text-slate-500 font-bold">${item.org}</span>
+            </div>
+            <h4 class="text-xs font-bold text-slate-900 line-clamp-2">${item.title}</h4>
+          </div>
+          <div class="text-[11px] text-slate-500 pt-2 border-t border-slate-200/70 flex justify-between">
+            <span>💰 ${item.amount || '-'}</span>
+            <span>📅 締切: ${item.deadline || '-'}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function setTargetFilter(t) {
+      filterTarget = t;
+      ['all', 'researcher', 'student'].forEach(k => {
+        const btn = document.getElementById('btn-t-' + k);
+        btn.className = (k === t)
+          ? 'px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-white'
+          : 'px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200';
+      });
+      renderAll();
+    }
+
+    function selectMatrix(p, prov) {
+      if (filterPhase === p && filterProvider === prov) {
+        filterPhase = null; filterProvider = null;
+      } else {
+        filterPhase = p; filterProvider = prov;
+      }
+      renderAll();
+    }
+
+    function resetFilters() {
+      filterPhase = null;
+      filterProvider = null;
+      document.getElementById('searchInput').value = '';
+      setTargetFilter('all');
+    }
+
+    function renderAll() {
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      const baseFiltered = allPrograms.filter(item => {
+        const matchTarget = filterTarget === 'all' || (item.targets && item.targets.includes(filterTarget));
+        const matchQ = !q || (item.title + item.org + item.summary + item.internalMemo).toLowerCase().includes(q);
+        return matchTarget && matchQ;
+      });
+
+      const tbody = document.getElementById('matrixBody');
+      tbody.innerHTML = '';
+      PHASES.forEach(ph => {
+        const tr = document.createElement('tr');
+        const th = document.createElement('td');
+        th.className = 'p-3 font-bold bg-slate-50 border-r border-slate-200 cursor-pointer hover:bg-slate-100';
+        th.onclick = () => selectMatrix(ph.id, null);
+        th.innerHTML = `<div>${ph.name}</div><div class="text-[10px] text-slate-400 font-normal">${ph.sub}</div>`;
+        tr.appendChild(th);
+
+        PROVIDERS.forEach(prov => {
+          const td = document.createElement('td');
+          const cellItems = baseFiltered.filter(i => i.phase === ph.id && i.providerType === prov);
+          const isSelected = (filterPhase === ph.id && filterProvider === prov) ||
+                             (filterPhase === ph.id && !filterProvider) ||
+                             (!filterPhase && filterProvider === prov);
+          td.className = `p-3 border-r border-slate-200 align-top cursor-pointer matrix-cell ${isSelected ? 'bg-blue-50/70 ring-2 ring-inset ring-blue-500' : 'hover:bg-slate-50'}`;
+          td.onclick = () => selectMatrix(ph.id, prov);
+
+          const badges = cellItems.map(i => {
+            const dot = i.status === 'open' ? '🟢' : (i.status === 'closing' ? '🟠' : '🔵');
+            return `<div class="truncate py-0.5 text-slate-700 font-medium">${dot} ${i.title}</div>`;
+          }).join('');
+
+          td.innerHTML = `
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-[11px] font-bold text-slate-400">${cellItems.length}件</span>
+            </div>
+            <div class="space-y-0.5">${badges || '<span class="text-slate-300">該当なし</span>'}</div>
+          `;
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+
+      const finalItems = baseFiltered.filter(i => {
+        const mP = !filterPhase || i.phase === filterPhase;
+        const mProv = !filterProvider || i.providerType === filterProvider;
+        return mP && mProv;
+      });
+
+      document.getElementById('countText').textContent = finalItems.length;
+      const container = document.getElementById('cardsContainer');
+      container.innerHTML = finalItems.map(item => {
+        const statusBadge = item.status === 'open'
+          ? '<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold text-[11px]">公募中</span>'
+          : (item.status === 'closing'
+            ? '<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold text-[11px]">締切間近</span>'
+            : '<span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-bold text-[11px]">公募予定</span>');
+
+        const autoBadge = item.sourceType === 'auto'
+          ? '<span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-bold text-[10px]">⚡ 自動検知</span>'
+          : '';
+
+        return `
+          <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200 flex flex-col justify-between space-y-3">
+            <div class="space-y-2">
+              <div class="flex justify-between items-start gap-2">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  ${statusBadge} ${autoBadge}
+                  <span class="text-xs font-bold text-slate-500">${item.org}</span>
+                </div>
+                <button onclick='editItem(${JSON.stringify(item).replace(/'/g, "&#39;")})' class="text-xs text-slate-400 hover:text-blue-600 font-bold">編集</button>
+              </div>
+              <h3 class="text-sm font-bold text-slate-900">${item.title}</h3>
+              <p class="text-xs text-slate-600 leading-relaxed">${item.summary}</p>
+              ${item.internalMemo ? `<div class="bg-amber-50 border border-amber-200 text-amber-900 px-3 py-1.5 rounded-lg text-xs">📌 <b>学内メモ:</b> ${item.internalMemo}</div>` : ''}
+            </div>
+            <div class="pt-2 border-t border-slate-100 flex justify-between items-center text-xs">
+              <div class="space-x-3 text-slate-600">
+                <span>💰 <b>規模:</b> ${item.amount || '-'}</span>
+                <span>📅 <b>締切:</b> ${item.deadline || '-'}</span>
+              </div>
+              <a href="${item.url}" target="_blank" rel="noopener" class="text-blue-600 font-bold hover:underline">公式ページ ↗</a>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function triggerManualCrawl() {
+      const btn = document.getElementById('crawlBtn');
+      btn.textContent = '⏳ 巡回中...';
+      btn.disabled = true;
+      google.script.run.withSuccessHandler(function(res) {
+        applyServerData(res);
+        btn.textContent = '🔄 今すぐ手動巡回';
+        btn.disabled = false;
+      }).dailyAutoCrawl();
+    }
+
+    function openModal() {
+      document.getElementById('f_id').value = '';
+      document.getElementById('f_title').value = '';
+      document.getElementById('f_org').value = '';
+      document.getElementById('f_amount').value = '';
+      document.getElementById('f_deadline').value = '';
+      document.getElementById('f_url').value = '';
+      document.getElementById('f_summary').value = '';
+      document.getElementById('f_memo').value = '';
+      document.getElementById('modalOverlay').classList.remove('hidden');
+    }
+
+    function editItem(item) {
+      document.getElementById('f_id').value = item.id;
+      document.getElementById('f_title').value = item.title;
+      document.getElementById('f_org').value = item.org;
+      document.getElementById('f_status').value = item.status || 'open';
+      document.getElementById('f_phase').value = item.phase || 'p1';
+      document.getElementById('f_provider').value = item.providerType || 'public';
+      document.getElementById('f_amount').value = item.amount || '';
+      document.getElementById('f_deadline').value = item.deadline || '';
+      document.getElementById('f_url').value = item.url || '';
+      document.getElementById('f_summary').value = item.summary || '';
+      document.getElementById('f_memo').value = item.internalMemo || '';
+      document.getElementById('f_t_res').checked = (item.targets || []).includes('researcher');
+      document.getElementById('f_t_stu').checked = (item.targets || []).includes('student');
+      document.getElementById('modalOverlay').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('modalOverlay').classList.add('hidden');
+    }
+
+    function submitForm() {
+      const title = document.getElementById('f_title').value.trim();
+      const org = document.getElementById('f_org').value.trim();
+      if (!title || !org) { alert('プログラム名称と提供機関名は必須です'); return; }
+
+      const targets = [];
+      if (document.getElementById('f_t_res').checked) targets.push('researcher');
+      if (document.getElementById('f_t_stu').checked) targets.push('student');
+
+      const payload = {
+        id: document.getElementById('f_id').value,
+        title: title,
+        org: org,
+        status: document.getElementById('f_status').value,
+        phase: document.getElementById('f_phase').value,
+        providerType: document.getElementById('f_provider').value,
+        amount: document.getElementById('f_amount').value,
+        deadline: document.getElementById('f_deadline').value,
+        targets: targets,
+        url: document.getElementById('f_url').value,
+        summary: document.getElementById('f_summary').value,
+        internalMemo: document.getElementById('f_memo').value
+      };
+
+      const btn = document.getElementById('saveBtn');
+      btn.textContent = '保存中...';
+      btn.disabled = true;
+
+      google.script.run.withSuccessHandler(function(res) {
+        applyServerData(res);
+        btn.textContent = 'スプレッドシートに保存';
+        btn.disabled = false;
+        closeModal();
+      }).saveProgramData(payload);
+    }
+  </script>
+</body>
+</html>
