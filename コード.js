@@ -9,8 +9,12 @@
 
 const SHEET_PROGRAMS = 'Programs';
 const SHEET_TARGETS = 'CrawlTargets';
+const SHEET_ANALYTICS = 'Analytics';
 const CACHE_KEY_PUBLIC = 'PUBLIC_PROGRAMS_JSON_V1';
 const CACHE_TTL_SECONDS = 300; // 5分キャッシュ
+
+const ANALYTICS_HEADERS = ['date', 'type', 'label', 'count', 'updatedAt'];
+const ALLOWED_ANALYTICS_TYPES = new Set(['pv', 'phase', 'search', 'filter', 'program_click']);
 
 // [EDIT] オーナー設定・カスタマイズ項目
 const CONFIG = {
@@ -67,6 +71,93 @@ function doGet(e) {
 
   return ContentService.createTextOutput(jsonStr)
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * 公開フロントエンドからの軽量アクセス・関心イベント (POST text/plain JSON) を記録する。
+ */
+function doPost(e) {
+  try {
+    const rawBody = (e && e.postData && e.postData.contents) ? String(e.postData.contents) : '';
+    if (!rawBody) {
+      return jsonOutput_({ ok: false, error: 'Empty body' });
+    }
+    const payload = JSON.parse(rawBody);
+    const type = String(payload.type || '').trim();
+    if (!ALLOWED_ANALYTICS_TYPES.has(type)) {
+      return jsonOutput_({ ok: false, error: 'Invalid event type' });
+    }
+
+    let label = String(payload.label || '')
+      .replace(/[\x00-\x1F\x7F]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 80);
+
+    if (!label && type === 'pv') {
+      label = 'home';
+    }
+    if (!label) {
+      return jsonOutput_({ ok: false, error: 'Empty label' });
+    }
+
+    recordAnalyticsEvent_(type, label);
+    return jsonOutput_({ ok: true });
+  } catch (err) {
+    console.warn('doPost error: ' + err.message);
+    return jsonOutput_({ ok: false, error: 'Invalid request' });
+  }
+}
+
+function jsonOutput_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * (date, type, label) 単位で Analytics シートにカウントを集約する。
+ */
+function recordAnalyticsEvent_(type, label) {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(2000)) {
+    return;
+  }
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(SHEET_ANALYTICS);
+    if (!sheet) {
+      sheet = ss.insertSheet(SHEET_ANALYTICS);
+      sheet.appendRow(ANALYTICS_HEADERS);
+    } else if (sheet.getLastRow() === 0) {
+      sheet.appendRow(ANALYTICS_HEADERS);
+    }
+
+    const now = new Date();
+    const todayStr = Utilities.formatDate(now, 'JST', 'yyyy-MM-dd');
+    const nowTimeStr = Utilities.formatDate(now, 'JST', 'yyyy-MM-dd HH:mm');
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+      const rows = sheet.getRange(2, 1, lastRow - 1, 5).getValues();
+      for (let i = rows.length - 1; i >= 0; i--) {
+        const rowDate = rows[i][0] instanceof Date
+          ? Utilities.formatDate(rows[i][0], 'JST', 'yyyy-MM-dd')
+          : String(rows[i][0] || '').trim();
+        const rowType = String(rows[i][1] || '').trim();
+        const rowLabel = String(rows[i][2] || '').trim();
+        if (rowDate === todayStr && rowType === type && rowLabel === label) {
+          const nextCount = (Number(rows[i][3]) || 0) + 1;
+          sheet.getRange(i + 2, 4, 1, 2).setValues([[nextCount, nowTimeStr]]);
+          return;
+        }
+      }
+    }
+
+    sheet.getRange(lastRow + 1, 1, 1, 5).setValues([[todayStr, type, label, 1, nowTimeStr]]);
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 /**
@@ -248,7 +339,76 @@ function getAdminData(token) {
     authMethod: auth.method,
     lastSync: props.getProperty('LAST_SYNC') || '未実行',
     programs: programs.reverse(),
-    targets: targets
+    targets: targets,
+    analytics: getAnalyticsSummary_(ss)
+  };
+}
+
+/**
+ * Analytics シートから PV と各種ランキング（上位10件）を集計する。
+ */
+function getAnalyticsSummary_(ss) {
+  const empty = {
+    todayPv: 0,
+    last7DaysPv: 0,
+    totalPv: 0,
+    topPhases: [],
+    topSearches: [],
+    topFilters: [],
+    topPrograms: []
+  };
+
+  const sheet = ss.getSheetByName(SHEET_ANALYTICS);
+  if (!sheet || sheet.getLastRow() <= 1) return empty;
+
+  const now = new Date();
+  const todayStr = Utilities.formatDate(now, 'JST', 'yyyy-MM-dd');
+  const sevenDaysAgo = new Date(now.getTime() - 6 * 86400000);
+  const sevenDaysAgoStr = Utilities.formatDate(sevenDaysAgo, 'JST', 'yyyy-MM-dd');
+
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
+  let todayPv = 0;
+  let last7DaysPv = 0;
+  let totalPv = 0;
+
+  const maps = {
+    phase: {},
+    search: {},
+    filter: {},
+    program_click: {}
+  };
+
+  rows.forEach(row => {
+    const dateStr = row[0] instanceof Date
+      ? Utilities.formatDate(row[0], 'JST', 'yyyy-MM-dd')
+      : String(row[0] || '').trim();
+    const type = String(row[1] || '').trim();
+    const label = String(row[2] || '').trim();
+    const count = Number(row[3]) || 0;
+    if (!type || !count) return;
+
+    if (type === 'pv') {
+      totalPv += count;
+      if (dateStr === todayStr) todayPv += count;
+      if (dateStr >= sevenDaysAgoStr && dateStr <= todayStr) last7DaysPv += count;
+    } else if (maps[type] && label) {
+      maps[type][label] = (maps[type][label] || 0) + count;
+    }
+  });
+
+  const toTop10 = (map) => Object.keys(map)
+    .map(label => ({ label: label, count: map[label] }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  return {
+    todayPv: todayPv,
+    last7DaysPv: last7DaysPv,
+    totalPv: totalPv,
+    topPhases: toTop10(maps.phase),
+    topSearches: toTop10(maps.search),
+    topFilters: toTop10(maps.filter),
+    topPrograms: toTop10(maps.program_click)
   };
 }
 

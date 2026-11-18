@@ -10,9 +10,78 @@ const CONFIG = {
   DATA_ENDPOINT: 'https://script.google.com/macros/s/AKfycbyPBTe3iiRLDhA9YjMikHIqJwMCztSLvoMxqUnXgBgVenNROTYJnE3gRLuvbHWDw8NK1w/exec?api=programs',
 
   // サンプルデータのパス（ローカル確認・未設定時のフォールバック用）
-  FALLBACK_ENDPOINT: './sample-data.json'
+  FALLBACK_ENDPOINT: './sample-data.json',
+
+  // [EDIT] Google Analytics 4 (GA4) を使う場合は測定ID（例: 'G-XXXXXXXXXX'）を設定してください
+  // 空文字 '' のままにすると GA4 は読み込まれません。
+  GA_MEASUREMENT_ID: '',
+
+  // 簡易アクセス・関心分析（GAS側 Analytics シートへの記録）を有効にするか
+  ENABLE_INTERNAL_ANALYTICS: true
 };
 // ============================================================================
+
+function getTrackEndpoint() {
+  const raw = (CONFIG.DATA_ENDPOINT || '').trim();
+  if (!raw) return '';
+  return raw.replace(/\?api=programs(&|$)/, '?').replace(/\?$/, '');
+}
+
+const TRACK_ENDPOINT = getTrackEndpoint();
+let searchTrackTimer = null;
+
+function initGA4() {
+  const gaId = (CONFIG.GA_MEASUREMENT_ID || '').trim();
+  if (!gaId) return;
+
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function gtag() {
+    window.dataLayer.push(arguments);
+  };
+  window.gtag('js', new Date());
+  window.gtag('config', gaId, { anonymize_ip: true });
+
+  const script = document.createElement('script');
+  script.async = true;
+  script.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(gaId);
+  document.head.appendChild(script);
+}
+
+function trackEvent(type, label) {
+  const cleanLabel = String(label || '').slice(0, 80);
+
+  if (CONFIG.ENABLE_INTERNAL_ANALYTICS && TRACK_ENDPOINT) {
+    try {
+      const payload = JSON.stringify({ type, label: cleanLabel });
+      const sent =
+        typeof navigator !== 'undefined' &&
+        typeof navigator.sendBeacon === 'function' &&
+        navigator.sendBeacon(
+          TRACK_ENDPOINT,
+          new Blob([payload], { type: 'text/plain;charset=UTF-8' })
+        );
+      if (!sent) {
+        fetch(TRACK_ENDPOINT, {
+          method: 'POST',
+          mode: 'no-cors',
+          keepalive: true,
+          headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+          body: payload
+        }).catch(() => {});
+      }
+    } catch {
+      // ignore tracking errors
+    }
+  }
+
+  if (typeof window.gtag === 'function') {
+    try {
+      window.gtag('event', type, { event_label: cleanLabel });
+    } catch {
+      // ignore GA4 errors
+    }
+  }
+}
 
 const PHASES = [
   {
@@ -66,11 +135,13 @@ const state = {
 const els = {};
 
 document.addEventListener('DOMContentLoaded', () => {
+  initGA4();
   cacheElements();
   bindEvents();
   readInitialPhaseFromUrl();
   renderFilterChips();
   loadPrograms();
+  trackEvent('pv', 'home');
 });
 
 function cacheElements() {
@@ -97,6 +168,13 @@ function bindEvents() {
   els.searchInput.addEventListener('input', (e) => {
     state.searchQuery = e.target.value.trim().toLowerCase();
     render();
+    clearTimeout(searchTrackTimer);
+    if (state.searchQuery.length >= 2) {
+      const querySnapshot = state.searchQuery;
+      searchTrackTimer = setTimeout(() => {
+        trackEvent('search', querySnapshot);
+      }, 1000);
+    }
   });
 
   els.clearPhaseBtn.addEventListener('click', () => {
@@ -272,12 +350,14 @@ function renderFilterChips() {
     state.selectedStatus = id;
     renderFilterChips();
     render();
+    trackEvent('filter', 'status:' + id);
   });
 
   renderChipGroup(els.providerFilters, PROVIDER_OPTIONS, state.selectedProvider, (id) => {
     state.selectedProvider = id;
     renderFilterChips();
     render();
+    trackEvent('filter', 'provider:' + id);
   });
 }
 
@@ -335,6 +415,9 @@ function renderPhaseBar(baseFiltered) {
     btn.addEventListener('click', () => {
       state.selectedPhase = isActive ? null : phase.id;
       render();
+      if (!isActive) {
+        trackEvent('phase', phase.label);
+      }
     });
 
     els.phaseBar.appendChild(btn);
@@ -428,6 +511,9 @@ function renderCards(items) {
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
       link.textContent = '公式ページを見る →';
+      link.addEventListener('click', () => {
+        trackEvent('program_click', item.title || item.url);
+      });
       foot.appendChild(link);
     }
 

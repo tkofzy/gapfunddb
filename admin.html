@@ -153,8 +153,38 @@
     .form-field label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: var(--muted); }
     .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
     .hidden { display: none !important; }
+    .analytics-kpis {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .kpi-card {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 16px;
+      background: #fafaf8;
+    }
+    .kpi-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    .kpi-value { font-size: 24px; font-weight: 700; color: var(--text); }
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .analytics-panel {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 16px;
+      background: #fff;
+    }
+    .analytics-panel h3 {
+      margin: 0 0 10px;
+      font-size: 14px;
+      font-weight: 600;
+    }
     @media (max-width: 720px) {
-      .form-grid { grid-template-columns: 1fr; }
+      .form-grid, .analytics-kpis, .analytics-grid { grid-template-columns: 1fr; }
       table { display: block; overflow-x: auto; }
     }
   </style>
@@ -193,6 +223,7 @@
       <div class="tabs">
         <button class="tab-btn active" data-tab="programs" onclick="switchTab('programs')">公募・支援プログラム</button>
         <button class="tab-btn" data-tab="targets" onclick="switchTab('targets')">巡回ターゲット (CrawlTargets)</button>
+        <button class="tab-btn" data-tab="analytics" onclick="switchTab('analytics')">アクセス・関心分析</button>
       </div>
 
       <!-- Programs タブ -->
@@ -235,6 +266,54 @@
           </thead>
           <tbody id="targetsBody"></tbody>
         </table>
+      </div>
+
+      <!-- Analytics タブ -->
+      <div id="tab-analytics" class="card hidden">
+        <div class="analytics-kpis">
+          <div class="kpi-card">
+            <div class="kpi-label">今日の PV</div>
+            <div class="kpi-value" id="kpiTodayPv">0</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">直近7日間の PV</div>
+            <div class="kpi-value" id="kpi7dPv">0</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">累計 PV</div>
+            <div class="kpi-value" id="kpiTotalPv">0</div>
+          </div>
+        </div>
+        <div class="analytics-grid">
+          <div class="analytics-panel">
+            <h3>人気フェーズ (上位10)</h3>
+            <table>
+              <thead><tr><th>フェーズ</th><th style="width:80px;">回数</th></tr></thead>
+              <tbody id="analyticsPhasesBody"></tbody>
+            </table>
+          </div>
+          <div class="analytics-panel">
+            <h3>よく検索されるキーワード (上位10)</h3>
+            <table>
+              <thead><tr><th>キーワード</th><th style="width:80px;">回数</th></tr></thead>
+              <tbody id="analyticsSearchesBody"></tbody>
+            </table>
+          </div>
+          <div class="analytics-panel">
+            <h3>よく使われるフィルター (上位10)</h3>
+            <table>
+              <thead><tr><th>フィルター</th><th style="width:80px;">回数</th></tr></thead>
+              <tbody id="analyticsFiltersBody"></tbody>
+            </table>
+          </div>
+          <div class="analytics-panel">
+            <h3>クリック数上位プログラム (上位10)</h3>
+            <table>
+              <thead><tr><th>プログラム</th><th style="width:80px;">クリック</th></tr></thead>
+              <tbody id="analyticsProgramsBody"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </section>
   </main>
@@ -439,9 +518,11 @@
     function applyAdminData(res) {
       state.programs = res.programs || [];
       state.targets = res.targets || [];
+      state.analytics = res.analytics || {};
       document.getElementById('lastSyncLabel').textContent = '最終巡回: ' + (res.lastSync || '未実行');
       renderPrograms();
       renderTargets();
+      renderAnalytics();
     }
 
     function switchTab(name) {
@@ -450,6 +531,44 @@
       });
       document.getElementById('tab-programs').classList.toggle('hidden', name !== 'programs');
       document.getElementById('tab-targets').classList.toggle('hidden', name !== 'targets');
+      document.getElementById('tab-analytics').classList.toggle('hidden', name !== 'analytics');
+    }
+
+    function renderAnalytics() {
+      const a = state.analytics || {};
+      document.getElementById('kpiTodayPv').textContent = a.todayPv || 0;
+      document.getElementById('kpi7dPv').textContent = a.last7DaysPv || 0;
+      document.getElementById('kpiTotalPv').textContent = a.totalPv || 0;
+
+      renderRankingTable('analyticsPhasesBody', a.topPhases || []);
+      renderRankingTable('analyticsSearchesBody', a.topSearches || []);
+      renderRankingTable('analyticsFiltersBody', a.topFilters || []);
+      renderRankingTable('analyticsProgramsBody', a.topPrograms || []);
+    }
+
+    function renderRankingTable(tbodyId, items) {
+      const tbody = document.getElementById(tbodyId);
+      tbody.textContent = '';
+      if (!items || items.length === 0) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 2;
+        td.className = 'muted';
+        td.textContent = 'データがありません。';
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+      }
+      items.forEach(item => {
+        const tr = document.createElement('tr');
+        const tdLabel = document.createElement('td');
+        tdLabel.textContent = item.label || '';
+        const tdCount = document.createElement('td');
+        tdCount.textContent = String(item.count || 0);
+        tr.appendChild(tdLabel);
+        tr.appendChild(tdCount);
+        tbody.appendChild(tr);
+      });
     }
 
     function renderPrograms() {
