@@ -58,7 +58,7 @@ const state = {
   programs: [],
   lastUpdated: '-',
   selectedPhase: null,
-  selectedStatus: 'all',
+  selectedStatus: 'open',
   selectedProvider: 'all',
   searchQuery: ''
 };
@@ -121,7 +121,7 @@ function readInitialPhaseFromUrl() {
 
 function resetAllFilters() {
   state.selectedPhase = null;
-  state.selectedStatus = 'all';
+  state.selectedStatus = 'open';
   state.selectedProvider = 'all';
   state.searchQuery = '';
   els.searchInput.value = '';
@@ -213,9 +213,41 @@ function isSafeHttpUrl(rawUrl) {
   }
 }
 
+const STATUS_PRIORITY = {
+  closing_soon: 0,
+  open: 1,
+  always: 2,
+  closed: 3
+};
+
+function parseDeadlineTimestamp(raw) {
+  if (typeof raw !== 'string') return Number.POSITIVE_INFINITY;
+  const s = raw.trim();
+  if (!s) return Number.POSITIVE_INFINITY;
+
+  const isoMatch = s.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})(?:[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (isoMatch) {
+    const [, y, m, d, hh = '23', mm = '59', ss = '59'] = isoMatch;
+    return new Date(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm), Number(ss)).getTime();
+  }
+
+  const jpMatch = s.match(/(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日/);
+  if (jpMatch) {
+    const [, y, m, d] = jpMatch;
+    return new Date(Number(y), Number(m) - 1, Number(d), 23, 59, 59).getTime();
+  }
+
+  return Number.POSITIVE_INFINITY;
+}
+
 function matchesNonPhaseFilters(program) {
   if (state.selectedStatus !== 'all') {
-    if (normalizeStatus(program.status) !== state.selectedStatus) return false;
+    const norm = normalizeStatus(program.status);
+    if (state.selectedStatus === 'open') {
+      if (norm !== 'closing_soon' && norm !== 'open' && norm !== 'always') return false;
+    } else if (norm !== state.selectedStatus) {
+      return false;
+    }
   }
   if (state.selectedProvider !== 'all') {
     if (program.providerType !== state.selectedProvider) return false;
@@ -408,15 +440,22 @@ function render() {
   const baseFiltered = state.programs.filter(matchesNonPhaseFilters);
   renderPhaseBar(baseFiltered);
 
-  const finalItems = state.selectedPhase
+  const filtered = state.selectedPhase
     ? baseFiltered.filter(p => p.phase === state.selectedPhase)
     : baseFiltered;
+
+  const finalItems = filtered.slice().sort((a, b) => {
+    const pa = STATUS_PRIORITY[normalizeStatus(a.status)] ?? 99;
+    const pb = STATUS_PRIORITY[normalizeStatus(b.status)] ?? 99;
+    if (pa !== pb) return pa - pb;
+    return parseDeadlineTimestamp(a.deadline) - parseDeadlineTimestamp(b.deadline);
+  });
 
   els.resultsCount.textContent = `${finalItems.length}件`;
 
   const hasAnyFilter =
     Boolean(state.selectedPhase) ||
-    state.selectedStatus !== 'all' ||
+    state.selectedStatus !== 'open' ||
     state.selectedProvider !== 'all' ||
     Boolean(state.searchQuery);
   els.resetFiltersBtn.hidden = !hasAnyFilter;
