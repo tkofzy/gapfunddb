@@ -167,10 +167,16 @@ async function loadPrograms() {
 }
 
 function setViewState(mode) {
-  els.loadingState.hidden = mode !== 'loading';
-  els.errorState.hidden = mode !== 'error';
-  els.emptyState.hidden = mode !== 'empty';
-  els.cardsContainer.hidden = mode !== 'ready';
+  const states = [
+    [els.loadingState, mode !== 'loading'],
+    [els.errorState, mode !== 'error'],
+    [els.emptyState, mode !== 'empty'],
+    [els.cardsContainer, mode !== 'ready']
+  ];
+  states.forEach(([el, isHidden]) => {
+    el.hidden = isHidden;
+    el.style.display = isHidden ? 'none' : '';
+  });
 }
 
 function normalizeStatus(rawStatus) {
