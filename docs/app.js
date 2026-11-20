@@ -107,11 +107,11 @@ const PHASES = [
 ];
 
 const STATUS_OPTIONS = [
+  { id: 'all', label: 'すべて' },
   { id: 'open', label: '公募中' },
   { id: 'closing_soon', label: '締切間近' },
   { id: 'always', label: '通年募集' },
-  { id: 'closed', label: '終了' },
-  { id: 'all', label: 'すべて' }
+  { id: 'closed', label: '終了' }
 ];
 
 const TARGET_OPTIONS = [
