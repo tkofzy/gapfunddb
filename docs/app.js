@@ -107,11 +107,18 @@ const PHASES = [
 ];
 
 const STATUS_OPTIONS = [
-  { id: 'all', label: 'すべて' },
   { id: 'open', label: '公募中' },
   { id: 'closing_soon', label: '締切間近' },
   { id: 'always', label: '通年募集' },
-  { id: 'closed', label: '終了' }
+  { id: 'closed', label: '終了' },
+  { id: 'all', label: 'すべて' }
+];
+
+const TARGET_OPTIONS = [
+  { id: 'all', label: 'すべて' },
+  { id: 'researcher', label: '研究者' },
+  { id: 'student', label: '学生' },
+  { id: 'other', label: '一般・起業家' }
 ];
 
 const PROVIDER_OPTIONS = [
@@ -122,17 +129,27 @@ const PROVIDER_OPTIONS = [
 ];
 
 const PHASE_LABEL_MAP = Object.fromEntries(PHASES.map(p => [p.id, p.label]));
+const PHASE_MAP = Object.fromEntries(PHASES.map(p => [p.id, p]));
+const PROVIDER_LABEL_MAP = Object.fromEntries(PROVIDER_OPTIONS.map(p => [p.id, p.label]));
+const TARGET_LABEL_MAP = {
+  researcher: '研究者',
+  student: '学生',
+  other: '一般・起業家'
+};
 
 const state = {
   programs: [],
   lastUpdated: '-',
   selectedPhase: null,
   selectedStatus: 'open',
+  selectedTarget: 'all',
   selectedProvider: 'all',
-  searchQuery: ''
+  searchQuery: '',
+  activeProgramId: null
 };
 
 const els = {};
+let lastFocusedElement = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   initGA4();
@@ -148,13 +165,18 @@ function cacheElements() {
   els.lastUpdatedText = document.getElementById('lastUpdatedText');
   els.demoBanner = document.getElementById('demoBanner');
   els.demoBannerText = document.getElementById('demoBannerText');
-  els.phaseBar = document.getElementById('phaseBar');
-  els.clearPhaseBtn = document.getElementById('clearPhaseBtn');
   els.searchInput = document.getElementById('searchInput');
+  els.clearSearchBtn = document.getElementById('clearSearchBtn');
   els.statusFilters = document.getElementById('statusFilters');
+  els.phaseFilters = document.getElementById('phaseFilters');
+  els.phaseGuideBar = document.getElementById('phaseGuideBar');
+  els.phaseGuideTitle = document.getElementById('phaseGuideTitle');
+  els.phaseGuideDesc = document.getElementById('phaseGuideDesc');
+  els.targetFilters = document.getElementById('targetFilters');
   els.providerFilters = document.getElementById('providerFilters');
   els.resetFiltersBtn = document.getElementById('resetFiltersBtn');
   els.resultsCount = document.getElementById('resultsCount');
+  els.dataTableWrap = document.getElementById('dataTableWrap');
   els.loadingState = document.getElementById('loadingState');
   els.errorState = document.getElementById('errorState');
   els.errorMessage = document.getElementById('errorMessage');
@@ -162,11 +184,29 @@ function cacheElements() {
   els.emptyState = document.getElementById('emptyState');
   els.emptyResetBtn = document.getElementById('emptyResetBtn');
   els.cardsContainer = document.getElementById('cardsContainer');
+
+  els.detailDrawerOverlay = document.getElementById('detailDrawerOverlay');
+  els.detailDrawer = document.getElementById('detailDrawer');
+  els.drawerBadges = document.getElementById('drawerBadges');
+  els.drawerCloseBtn = document.getElementById('drawerCloseBtn');
+  els.drawerFooterCloseBtn = document.getElementById('drawerFooterCloseBtn');
+  els.drawerTitle = document.getElementById('drawerTitle');
+  els.drawerOrg = document.getElementById('drawerOrg');
+  els.drawerAmount = document.getElementById('drawerAmount');
+  els.drawerDeadline = document.getElementById('drawerDeadline');
+  els.drawerTargets = document.getElementById('drawerTargets');
+  els.drawerPhase = document.getElementById('drawerPhase');
+  els.drawerProvider = document.getElementById('drawerProvider');
+  els.drawerUpdatedAt = document.getElementById('drawerUpdatedAt');
+  els.drawerSummaryWrap = document.getElementById('drawerSummaryWrap');
+  els.drawerSummary = document.getElementById('drawerSummary');
+  els.drawerLink = document.getElementById('drawerLink');
 }
 
 function bindEvents() {
   els.searchInput.addEventListener('input', (e) => {
     state.searchQuery = e.target.value.trim().toLowerCase();
+    els.clearSearchBtn.hidden = !state.searchQuery;
     render();
     clearTimeout(searchTrackTimer);
     if (state.searchQuery.length >= 2) {
@@ -177,14 +217,38 @@ function bindEvents() {
     }
   });
 
-  els.clearPhaseBtn.addEventListener('click', () => {
-    state.selectedPhase = null;
+  els.clearSearchBtn.addEventListener('click', () => {
+    state.searchQuery = '';
+    els.searchInput.value = '';
+    els.clearSearchBtn.hidden = true;
     render();
+    els.searchInput.focus();
   });
 
   els.resetFiltersBtn.addEventListener('click', resetAllFilters);
   els.emptyResetBtn.addEventListener('click', resetAllFilters);
   els.retryBtn.addEventListener('click', loadPrograms);
+
+  els.drawerCloseBtn.addEventListener('click', closeDrawer);
+  els.drawerFooterCloseBtn.addEventListener('click', closeDrawer);
+  els.detailDrawerOverlay.addEventListener('click', (e) => {
+    if (e.target === els.detailDrawerOverlay) {
+      closeDrawer();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !els.detailDrawerOverlay.hidden) {
+      closeDrawer();
+    }
+  });
+
+  els.drawerLink.addEventListener('click', () => {
+    const active = state.programs.find(p => String(p.id) === String(state.activeProgramId));
+    if (active) {
+      trackEvent('program_click', active.title || active.url);
+    }
+  });
 }
 
 function readInitialPhaseFromUrl() {
@@ -200,9 +264,11 @@ function readInitialPhaseFromUrl() {
 function resetAllFilters() {
   state.selectedPhase = null;
   state.selectedStatus = 'open';
+  state.selectedTarget = 'all';
   state.selectedProvider = 'all';
   state.searchQuery = '';
   els.searchInput.value = '';
+  els.clearSearchBtn.hidden = true;
   renderFilterChips();
   render();
 }
@@ -238,6 +304,7 @@ async function loadPrograms() {
 
     render();
   } catch (err) {
+    els.resultsCount.textContent = '0件が該当';
     els.errorMessage.textContent =
       '通信環境をご確認のうえ、しばらくしてから再度お試しください。';
     setViewState('error');
@@ -245,6 +312,10 @@ async function loadPrograms() {
 }
 
 function setViewState(mode) {
+  const showTableWrap = mode === 'loading' || mode === 'ready';
+  els.dataTableWrap.hidden = !showTableWrap;
+  els.dataTableWrap.style.display = showTableWrap ? '' : 'none';
+
   const states = [
     [els.loadingState, mode !== 'loading'],
     [els.errorState, mode !== 'error'],
@@ -318,6 +389,50 @@ function parseDeadlineTimestamp(raw) {
   return Number.POSITIVE_INFINITY;
 }
 
+function normalizeTargetCode(raw) {
+  const val = String(raw || '').trim();
+  if (!val) return '';
+  const lower = val.toLowerCase();
+  if (lower === 'researcher' || val === '研究者') return 'researcher';
+  if (lower === 'student' || val === '学生') return 'student';
+  if (
+    lower === 'other' ||
+    lower === 'general' ||
+    lower === 'startup' ||
+    lower === 'entrepreneur' ||
+    val === 'その他' ||
+    val === '一般' ||
+    val === '起業家' ||
+    val === '一般・起業家'
+  ) {
+    return 'other';
+  }
+  return val;
+}
+
+function getProgramTargetCodes(program) {
+  const rawList = Array.isArray(program.targets)
+    ? program.targets
+    : String(program.targets || '').split(',');
+  const codes = [];
+  rawList.forEach((raw) => {
+    const code = normalizeTargetCode(raw);
+    if (code && !codes.includes(code)) {
+      codes.push(code);
+    }
+  });
+  return codes.length > 0 ? codes : ['other'];
+}
+
+function getProgramTargetLabels(program) {
+  return getProgramTargetCodes(program).map(code => TARGET_LABEL_MAP[code] || code);
+}
+
+function programMatchesTarget(program, selectedTarget) {
+  if (selectedTarget === 'all') return true;
+  return getProgramTargetCodes(program).includes(selectedTarget);
+}
+
 function matchesNonPhaseFilters(program) {
   if (state.selectedStatus !== 'all') {
     const norm = normalizeStatus(program.status);
@@ -327,21 +442,29 @@ function matchesNonPhaseFilters(program) {
       return false;
     }
   }
+
+  if (state.selectedTarget !== 'all') {
+    if (!programMatchesTarget(program, state.selectedTarget)) return false;
+  }
+
   if (state.selectedProvider !== 'all') {
     if (program.providerType !== state.selectedProvider) return false;
   }
+
   if (state.searchQuery) {
     const haystack = [
       program.title,
       program.org,
       program.summary,
-      program.amount
+      program.amount,
+      ...getProgramTargetLabels(program)
     ]
       .filter(Boolean)
       .join(' ')
       .toLowerCase();
     if (!haystack.includes(state.searchQuery)) return false;
   }
+
   return true;
 }
 
@@ -351,6 +474,13 @@ function renderFilterChips() {
     renderFilterChips();
     render();
     trackEvent('filter', 'status:' + id);
+  });
+
+  renderChipGroup(els.targetFilters, TARGET_OPTIONS, state.selectedTarget, (id) => {
+    state.selectedTarget = id;
+    renderFilterChips();
+    render();
+    trackEvent('filter', 'target:' + id);
   });
 
   renderChipGroup(els.providerFilters, PROVIDER_OPTIONS, state.selectedProvider, (id) => {
@@ -374,8 +504,8 @@ function renderChipGroup(container, options, activeId, onSelect) {
   });
 }
 
-function renderPhaseBar(baseFiltered) {
-  els.phaseBar.textContent = '';
+function renderPhaseFilters(baseFiltered) {
+  els.phaseFilters.textContent = '';
 
   const countsByPhase = { p1: 0, p2: 0, p3: 0, p4: 0 };
   baseFiltered.forEach((p) => {
@@ -384,33 +514,37 @@ function renderPhaseBar(baseFiltered) {
     }
   });
 
+  const allBtn = document.createElement('button');
+  allBtn.type = 'button';
+  const allActive = !state.selectedPhase;
+  allBtn.className = 'chip-btn' + (allActive ? ' is-active' : '');
+  allBtn.setAttribute('aria-pressed', String(allActive));
+  allBtn.textContent = 'すべて';
+  const allCount = document.createElement('span');
+  allCount.className = 'chip-count';
+  allCount.textContent = String(baseFiltered.length);
+  allBtn.appendChild(allCount);
+  allBtn.addEventListener('click', () => {
+    state.selectedPhase = null;
+    render();
+  });
+  els.phaseFilters.appendChild(allBtn);
+
   PHASES.forEach((phase) => {
     const isActive = state.selectedPhase === phase.id;
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'phase-btn' + (isActive ? ' is-active' : '');
+    btn.className = 'chip-btn' + (isActive ? ' is-active' : '');
     btn.setAttribute('aria-pressed', String(isActive));
 
-    const top = document.createElement('div');
-    top.className = 'phase-top';
+    const labelSpan = document.createElement('span');
+    labelSpan.textContent = phase.label;
+    btn.appendChild(labelSpan);
 
-    const nameEl = document.createElement('span');
-    nameEl.className = 'phase-name';
-    nameEl.textContent = phase.label;
-
-    const countEl = document.createElement('span');
-    countEl.className = 'phase-count';
-    countEl.textContent = `${countsByPhase[phase.id]}件`;
-
-    top.appendChild(nameEl);
-    top.appendChild(countEl);
-
-    const descEl = document.createElement('p');
-    descEl.className = 'phase-desc';
-    descEl.textContent = phase.description;
-
-    btn.appendChild(top);
-    btn.appendChild(descEl);
+    const countSpan = document.createElement('span');
+    countSpan.className = 'chip-count';
+    countSpan.textContent = String(countsByPhase[phase.id]);
+    btn.appendChild(countSpan);
 
     btn.addEventListener('click', () => {
       state.selectedPhase = isActive ? null : phase.id;
@@ -420,111 +554,205 @@ function renderPhaseBar(baseFiltered) {
       }
     });
 
-    els.phaseBar.appendChild(btn);
+    els.phaseFilters.appendChild(btn);
   });
 
-  els.clearPhaseBtn.hidden = !state.selectedPhase;
+  const activePhase = state.selectedPhase ? PHASE_MAP[state.selectedPhase] : null;
+  if (activePhase) {
+    els.phaseGuideTitle.textContent = activePhase.label;
+    els.phaseGuideDesc.textContent = activePhase.description;
+    els.phaseGuideBar.hidden = false;
+  } else {
+    els.phaseGuideBar.hidden = true;
+  }
 }
 
-function renderCards(items) {
+function renderRows(items) {
   els.cardsContainer.textContent = '';
 
   items.forEach((item) => {
-    const card = document.createElement('article');
-    card.className = 'program-card';
+    const normStatus = normalizeStatus(item.status);
+    const statusMeta = getStatusMeta(normStatus);
+    const isSelected = state.activeProgramId !== null && String(item.id) === String(state.activeProgramId);
 
-    const body = document.createElement('div');
+    const row = document.createElement('article');
+    row.className = 'program-row' + (isSelected ? ' is-selected' : '');
+    row.setAttribute('role', 'listitem');
+    row.tabIndex = 0;
+    row.setAttribute('aria-label', `${item.title || '名称未設定'} の詳細を開く`);
 
-    // Card header: status + phase + org
-    const head = document.createElement('div');
-    head.className = 'card-head';
+    row.addEventListener('click', () => openDrawer(item));
+    row.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openDrawer(item);
+      }
+    });
 
-    const badges = document.createElement('div');
-    badges.className = 'card-badges';
-
-    const statusMeta = getStatusMeta(item.status);
+    // 1. ステータスバッジ
+    const statusCol = document.createElement('div');
+    statusCol.className = 'col-status';
     const statusBadge = document.createElement('span');
     statusBadge.className = `badge ${statusMeta.className}`;
     statusBadge.textContent = statusMeta.label;
-    badges.appendChild(statusBadge);
+    statusCol.appendChild(statusBadge);
+    row.appendChild(statusCol);
 
-    if (item.phase && PHASE_LABEL_MAP[item.phase]) {
-      const phaseBadge = document.createElement('span');
-      phaseBadge.className = 'badge badge-phase';
-      phaseBadge.textContent = PHASE_LABEL_MAP[item.phase];
-      badges.appendChild(phaseBadge);
-    }
+    // 2. 公募/制度名 + 実施機関/フェーズ
+    const mainCol = document.createElement('div');
+    mainCol.className = 'col-main';
 
-    const orgEl = document.createElement('span');
-    orgEl.className = 'card-org';
-    orgEl.textContent = item.org || '';
-
-    head.appendChild(badges);
-    head.appendChild(orgEl);
-    body.appendChild(head);
-
-    // Title
     const titleEl = document.createElement('h3');
-    titleEl.className = 'card-title';
+    titleEl.className = 'row-title';
     titleEl.textContent = item.title || '名称未設定';
-    body.appendChild(titleEl);
+    mainCol.appendChild(titleEl);
 
-    // Summary
-    if (item.summary) {
-      const summaryEl = document.createElement('p');
-      summaryEl.className = 'card-summary';
-      summaryEl.textContent = item.summary;
-      body.appendChild(summaryEl);
+    const subline = document.createElement('div');
+    subline.className = 'row-subline';
+    const hasOrg = Boolean(item.org);
+    const phaseLabel = item.phase && PHASE_LABEL_MAP[item.phase] ? PHASE_LABEL_MAP[item.phase] : '';
+
+    if (hasOrg) {
+      const orgSpan = document.createElement('span');
+      orgSpan.className = 'row-org';
+      orgSpan.textContent = item.org;
+      subline.appendChild(orgSpan);
     }
-
-    card.appendChild(body);
-
-    // Footer: amount, deadline, external link
-    const foot = document.createElement('div');
-    foot.className = 'card-foot';
-
-    const meta = document.createElement('div');
-    meta.className = 'card-meta';
-
-    const amountItem = document.createElement('span');
-    amountItem.className = 'card-meta-item';
-    const amountStrong = document.createElement('strong');
-    amountStrong.textContent = '規模: ';
-    amountItem.appendChild(amountStrong);
-    amountItem.appendChild(document.createTextNode(item.amount || '-'));
-    meta.appendChild(amountItem);
-
-    const deadlineItem = document.createElement('span');
-    deadlineItem.className = 'card-meta-item';
-    const deadlineStrong = document.createElement('strong');
-    deadlineStrong.textContent = '締切: ';
-    deadlineItem.appendChild(deadlineStrong);
-    deadlineItem.appendChild(document.createTextNode(item.deadline || '-'));
-    meta.appendChild(deadlineItem);
-
-    foot.appendChild(meta);
-
-    if (isSafeHttpUrl(item.url)) {
-      const link = document.createElement('a');
-      link.className = 'card-link';
-      link.href = item.url.trim();
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      link.textContent = '公式ページを見る →';
-      link.addEventListener('click', () => {
-        trackEvent('program_click', item.title || item.url);
-      });
-      foot.appendChild(link);
+    if (hasOrg && phaseLabel) {
+      const sepSpan = document.createElement('span');
+      sepSpan.className = 'row-sep';
+      sepSpan.textContent = '/';
+      subline.appendChild(sepSpan);
     }
+    if (phaseLabel) {
+      const phaseSpan = document.createElement('span');
+      phaseSpan.className = 'row-phase';
+      phaseSpan.textContent = phaseLabel;
+      subline.appendChild(phaseSpan);
+    }
+    if (subline.childNodes.length > 0) {
+      mainCol.appendChild(subline);
+    }
+    row.appendChild(mainCol);
 
-    card.appendChild(foot);
-    els.cardsContainer.appendChild(card);
+    // 3. 支援金額/期間
+    const amountCol = document.createElement('div');
+    amountCol.className = 'col-amount';
+    const amountMobileLabel = document.createElement('span');
+    amountMobileLabel.className = 'col-label-mobile';
+    amountMobileLabel.textContent = '支援規模';
+    amountCol.appendChild(amountMobileLabel);
+    amountCol.appendChild(document.createTextNode(item.amount || '-'));
+    row.appendChild(amountCol);
+
+    // 4. 応募締切
+    const deadlineCol = document.createElement('div');
+    deadlineCol.className = 'col-deadline' + (normStatus === 'closing_soon' ? ' is-urgent' : '');
+    const deadlineMobileLabel = document.createElement('span');
+    deadlineMobileLabel.className = 'col-label-mobile';
+    deadlineMobileLabel.textContent = '応募締切';
+    deadlineCol.appendChild(deadlineMobileLabel);
+    deadlineCol.appendChild(document.createTextNode(item.deadline || '-'));
+    row.appendChild(deadlineCol);
+
+    // 5. 対象要件タグ
+    const targetsCol = document.createElement('div');
+    targetsCol.className = 'col-targets';
+    getProgramTargetLabels(item).forEach((label) => {
+      const tag = document.createElement('span');
+      tag.className = 'target-tag';
+      tag.textContent = label;
+      targetsCol.appendChild(tag);
+    });
+    row.appendChild(targetsCol);
+
+    els.cardsContainer.appendChild(row);
   });
+}
+
+function openDrawer(program) {
+  lastFocusedElement = document.activeElement;
+  state.activeProgramId = program.id;
+
+  const normStatus = normalizeStatus(program.status);
+  const statusMeta = getStatusMeta(normStatus);
+
+  els.drawerBadges.textContent = '';
+
+  const statusBadge = document.createElement('span');
+  statusBadge.className = `badge ${statusMeta.className}`;
+  statusBadge.textContent = statusMeta.label;
+  els.drawerBadges.appendChild(statusBadge);
+
+  const phaseLabel = program.phase && PHASE_LABEL_MAP[program.phase] ? PHASE_LABEL_MAP[program.phase] : '';
+  if (phaseLabel) {
+    const phaseBadge = document.createElement('span');
+    phaseBadge.className = 'badge badge-phase';
+    phaseBadge.textContent = phaseLabel;
+    els.drawerBadges.appendChild(phaseBadge);
+  }
+
+  const providerLabel = PROVIDER_LABEL_MAP[program.providerType] || '';
+  if (providerLabel) {
+    const providerBadge = document.createElement('span');
+    providerBadge.className = 'badge badge-provider';
+    providerBadge.textContent = providerLabel;
+    els.drawerBadges.appendChild(providerBadge);
+  }
+
+  els.drawerTitle.textContent = program.title || '名称未設定';
+  els.drawerOrg.textContent = program.org || '実施機関未設定';
+  els.drawerAmount.textContent = program.amount || '-';
+  els.drawerDeadline.textContent = program.deadline || '-';
+  els.drawerTargets.textContent = getProgramTargetLabels(program).join(' / ');
+  els.drawerPhase.textContent = phaseLabel || '-';
+  els.drawerProvider.textContent = providerLabel || '-';
+  els.drawerUpdatedAt.textContent = program.updatedAt || '-';
+
+  if (program.summary) {
+    els.drawerSummary.textContent = program.summary;
+    els.drawerSummaryWrap.hidden = false;
+  } else {
+    els.drawerSummary.textContent = '';
+    els.drawerSummaryWrap.hidden = true;
+  }
+
+  if (isSafeHttpUrl(program.url)) {
+    els.drawerLink.href = program.url.trim();
+    els.drawerLink.hidden = false;
+    els.drawerLink.style.display = '';
+  } else {
+    els.drawerLink.removeAttribute('href');
+    els.drawerLink.hidden = true;
+    els.drawerLink.style.display = 'none';
+  }
+
+  els.detailDrawerOverlay.hidden = false;
+  els.detailDrawerOverlay.style.display = '';
+  document.body.style.overflow = 'hidden';
+
+  render();
+  els.drawerCloseBtn.focus();
+}
+
+function closeDrawer() {
+  if (els.detailDrawerOverlay.hidden) return;
+  els.detailDrawerOverlay.hidden = true;
+  els.detailDrawerOverlay.style.display = 'none';
+  document.body.style.overflow = '';
+  state.activeProgramId = null;
+
+  render();
+
+  if (lastFocusedElement && typeof lastFocusedElement.focus === 'function' && document.contains(lastFocusedElement)) {
+    lastFocusedElement.focus();
+  }
+  lastFocusedElement = null;
 }
 
 function render() {
   const baseFiltered = state.programs.filter(matchesNonPhaseFilters);
-  renderPhaseBar(baseFiltered);
+  renderPhaseFilters(baseFiltered);
 
   const filtered = state.selectedPhase
     ? baseFiltered.filter(p => p.phase === state.selectedPhase)
@@ -537,11 +765,12 @@ function render() {
     return parseDeadlineTimestamp(a.deadline) - parseDeadlineTimestamp(b.deadline);
   });
 
-  els.resultsCount.textContent = `${finalItems.length}件`;
+  els.resultsCount.textContent = `${finalItems.length}件が該当`;
 
   const hasAnyFilter =
     Boolean(state.selectedPhase) ||
     state.selectedStatus !== 'open' ||
+    state.selectedTarget !== 'all' ||
     state.selectedProvider !== 'all' ||
     Boolean(state.searchQuery);
   els.resetFiltersBtn.hidden = !hasAnyFilter;
@@ -549,7 +778,7 @@ function render() {
   if (finalItems.length === 0) {
     setViewState('empty');
   } else {
-    renderCards(finalItems);
+    renderRows(finalItems);
     setViewState('ready');
   }
 }

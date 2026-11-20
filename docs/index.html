@@ -7,7 +7,7 @@
   <title>スタートアップ支援・公募情報データベース</title>
   <!-- [EDIT] サイトの説明文（検索エンジン・SNS共有用）を変更してください -->
   <meta name="description" content="起業準備から資金調達・成長フェーズまで、公募・補助金・アクセラレーター情報を整理して掲載しています。">
-  <link rel="stylesheet" href="./styles.css?v=4">
+  <link rel="stylesheet" href="./styles.css?v=5">
 </head>
 <body>
   <header class="site-header">
@@ -16,12 +16,14 @@
         <!-- [EDIT] サイトのメインタイトルを変更してください -->
         <h1 class="site-title">スタートアップ支援・公募情報データベース</h1>
         <!-- [EDIT] サイトのサブタイトル・概要文を変更してください -->
-        <p class="site-subtitle">公募・補助金・アクセラレーター情報まとめ</p>
+        <p class="site-subtitle">公募・補助金・アクセラレーター情報一覧</p>
       </div>
-      <div class="header-meta" aria-live="polite">
-        <span>最終更新:</span>
-        <time id="lastUpdatedText">-</time>
-      </div>
+      <nav class="header-nav" aria-label="サイト情報">
+        <div class="header-meta" aria-live="polite">
+          <span class="header-meta-label">最終更新</span>
+          <time id="lastUpdatedText" class="header-meta-value">-</time>
+        </div>
+      </nav>
     </div>
   </header>
 
@@ -31,54 +33,82 @@
       <p id="demoBannerText"></p>
     </div>
 
-    <!-- 4フェーズ連動ジャーニーバー -->
-    <section class="phase-section" aria-label="創業フェーズ別フィルタ">
-      <div class="section-header-row">
-        <h2 class="section-label">フェーズから探す</h2>
-        <button type="button" id="clearPhaseBtn" class="text-btn" hidden>すべて表示</button>
-      </div>
-      <div id="phaseBar" class="phase-grid" role="group" aria-label="フェーズ選択"></div>
-    </section>
-
-    <!-- 検索・絞り込みコントロール -->
-    <section class="filter-section" aria-label="検索と絞り込み">
-      <div class="search-wrap">
+    <!-- 検索・フィルターエリア -->
+    <section class="filter-panel" aria-label="検索と絞り込み">
+      <div class="search-row">
         <label for="searchInput" class="sr-only">キーワード検索</label>
-        <input
-          type="search"
-          id="searchInput"
-          class="search-input"
-          placeholder="プログラム名・実施機関・キーワードで検索..."
-          autocomplete="off"
-        >
+        <div class="search-input-wrap">
+          <input
+            type="search"
+            id="searchInput"
+            class="search-input"
+            placeholder="制度名・実施機関・支援内容・対象要件で検索..."
+            autocomplete="off"
+          >
+          <button type="button" id="clearSearchBtn" class="clear-search-btn" hidden>クリア</button>
+        </div>
       </div>
 
-      <div class="filter-controls">
-        <div class="filter-group">
-          <span class="filter-group-label">ステータス</span>
+      <div class="filter-rows">
+        <div class="filter-row">
+          <span class="filter-label">ステータス</span>
           <div id="statusFilters" class="chip-row" role="group" aria-label="ステータス絞り込み"></div>
         </div>
-        <div class="filter-group">
-          <span class="filter-group-label">実施主体</span>
+
+        <div class="filter-row">
+          <span class="filter-label">フェーズ</span>
+          <div id="phaseFilters" class="chip-row" role="group" aria-label="フェーズ絞り込み"></div>
+        </div>
+
+        <div id="phaseGuideBar" class="phase-guide-bar" hidden>
+          <span id="phaseGuideTitle" class="phase-guide-title"></span>
+          <span id="phaseGuideDesc" class="phase-guide-desc"></span>
+        </div>
+
+        <div class="filter-row">
+          <span class="filter-label">対象</span>
+          <div id="targetFilters" class="chip-row" role="group" aria-label="対象要件絞り込み"></div>
+        </div>
+
+        <div class="filter-row">
+          <span class="filter-label">実施主体</span>
           <div id="providerFilters" class="chip-row" role="group" aria-label="実施主体絞り込み"></div>
         </div>
-        <button type="button" id="resetFiltersBtn" class="text-btn reset-btn" hidden>条件をリセット</button>
       </div>
     </section>
 
-    <!-- プログラム一覧 -->
+    <!-- データ表示エリア -->
     <section class="results-section" aria-label="公募プログラム一覧">
-      <div class="results-header">
-        <h2 class="results-title">掲載プログラム</h2>
-        <span id="resultsCount" class="results-count">0件</span>
+      <div class="results-toolbar">
+        <div class="results-summary">
+          <strong id="resultsCount" class="results-count">0件が該当</strong>
+          <span class="results-hint">行をクリックすると詳細を表示</span>
+        </div>
+        <button type="button" id="resetFiltersBtn" class="text-btn" hidden>条件をリセット</button>
       </div>
 
-      <!-- ローディングスケルトン -->
-      <div id="loadingState" class="card-grid" aria-busy="true" aria-label="読み込み中">
-        <div class="skeleton-card"></div>
-        <div class="skeleton-card"></div>
-        <div class="skeleton-card"></div>
-        <div class="skeleton-card"></div>
+      <!-- 一覧テーブル／リスト -->
+      <div id="dataTableWrap" class="data-table-wrap">
+        <div class="list-header" aria-hidden="true">
+          <span>ステータス</span>
+          <span>公募・制度名</span>
+          <span>支援金額・期間</span>
+          <span>応募締切</span>
+          <span>対象要件</span>
+        </div>
+
+        <!-- ローディングスケルトン -->
+        <div id="loadingState" class="list-body" aria-busy="true" aria-label="読み込み中">
+          <div class="skeleton-row"><span class="skel skel-badge"></span><span class="skel skel-title"></span><span class="skel skel-meta"></span><span class="skel skel-date"></span><span class="skel skel-tags"></span></div>
+          <div class="skeleton-row"><span class="skel skel-badge"></span><span class="skel skel-title"></span><span class="skel skel-meta"></span><span class="skel skel-date"></span><span class="skel skel-tags"></span></div>
+          <div class="skeleton-row"><span class="skel skel-badge"></span><span class="skel skel-title"></span><span class="skel skel-meta"></span><span class="skel skel-date"></span><span class="skel skel-tags"></span></div>
+          <div class="skeleton-row"><span class="skel skel-badge"></span><span class="skel skel-title"></span><span class="skel skel-meta"></span><span class="skel skel-date"></span><span class="skel skel-tags"></span></div>
+          <div class="skeleton-row"><span class="skel skel-badge"></span><span class="skel skel-title"></span><span class="skel skel-meta"></span><span class="skel skel-date"></span><span class="skel skel-tags"></span></div>
+          <div class="skeleton-row"><span class="skel skel-badge"></span><span class="skel skel-title"></span><span class="skel skel-meta"></span><span class="skel skel-date"></span><span class="skel skel-tags"></span></div>
+        </div>
+
+        <!-- データ行コンテナ -->
+        <div id="cardsContainer" class="list-body" role="list" hidden></div>
       </div>
 
       <!-- エラー表示 -->
@@ -91,14 +121,75 @@
       <!-- 空状態表示 -->
       <div id="emptyState" class="state-box" hidden>
         <p class="state-title">条件に一致するプログラムが見つかりません</p>
-        <p class="state-desc">検索キーワードやフィルタ条件を変更してお試しください。</p>
+        <p class="state-desc">検索キーワードやフィルター条件を変更してお試しください。</p>
         <button type="button" id="emptyResetBtn" class="secondary-btn">絞り込みを解除</button>
       </div>
-
-      <!-- カード一覧コンテナ -->
-      <div id="cardsContainer" class="card-grid" hidden></div>
     </section>
   </main>
+
+  <!-- 詳細サイドドロワー -->
+  <div id="detailDrawerOverlay" class="drawer-overlay" hidden>
+    <aside
+      id="detailDrawer"
+      class="detail-drawer"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="drawerTitle"
+    >
+      <div class="drawer-header">
+        <div id="drawerBadges" class="drawer-badges"></div>
+        <button type="button" id="drawerCloseBtn" class="drawer-close-btn" aria-label="閉じる">閉じる</button>
+      </div>
+
+      <div class="drawer-body">
+        <h2 id="drawerTitle" class="drawer-title"></h2>
+        <p id="drawerOrg" class="drawer-org"></p>
+
+        <dl class="drawer-specs">
+          <div class="drawer-spec-row">
+            <dt>支援金額・規模</dt>
+            <dd id="drawerAmount">-</dd>
+          </div>
+          <div class="drawer-spec-row">
+            <dt>応募締切</dt>
+            <dd id="drawerDeadline">-</dd>
+          </div>
+          <div class="drawer-spec-row">
+            <dt>対象要件</dt>
+            <dd id="drawerTargets">-</dd>
+          </div>
+          <div class="drawer-spec-row">
+            <dt>創業フェーズ</dt>
+            <dd id="drawerPhase">-</dd>
+          </div>
+          <div class="drawer-spec-row">
+            <dt>実施主体</dt>
+            <dd id="drawerProvider">-</dd>
+          </div>
+          <div class="drawer-spec-row">
+            <dt>情報更新日</dt>
+            <dd id="drawerUpdatedAt">-</dd>
+          </div>
+        </dl>
+
+        <div id="drawerSummaryWrap" class="drawer-summary-section">
+          <h3 class="drawer-section-heading">概要・特記事項</h3>
+          <p id="drawerSummary" class="drawer-summary"></p>
+        </div>
+      </div>
+
+      <div class="drawer-footer">
+        <a
+          id="drawerLink"
+          class="primary-btn drawer-link-btn"
+          href="#"
+          target="_blank"
+          rel="noopener noreferrer"
+        >公式ページを開く →</a>
+        <button type="button" id="drawerFooterCloseBtn" class="secondary-btn">閉じる</button>
+      </div>
+    </aside>
+  </div>
 
   <footer class="site-footer">
     <div class="container footer-inner">
@@ -109,6 +200,6 @@
     </div>
   </footer>
 
-  <script src="./app.js?v=4" defer></script>
+  <script src="./app.js?v=5" defer></script>
 </body>
 </html>
