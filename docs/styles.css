@@ -23,8 +23,12 @@
   /* Semantic Status Tokens */
   --status-open-bg: #E6F4EA;
   --status-open-ink: #137333;
-  --status-closing-bg: #FEF7E0;
-  --status-closing-ink: #B06000;
+  --status-closing-bg: #FFF7ED;
+  --status-closing-ink: #C2410C;
+  --status-closing-border: #FED7AA;
+  --status-new-bg: #FCE8E6;
+  --status-new-ink: #C5221F;
+  --status-new-border: #F28B82;
   --status-always-bg: var(--md-sys-color-primary-container);
   --status-always-ink: var(--md-sys-color-on-primary-container);
   --status-closed-bg: #F1F3F4;
@@ -426,7 +430,7 @@ body {
 
 .list-header {
   display: grid;
-  grid-template-columns: 100px minmax(240px, 1.8fr) minmax(140px, 1fr) 128px minmax(140px, 0.9fr);
+  grid-template-columns: 112px minmax(240px, 1.8fr) minmax(140px, 1fr) 128px minmax(140px, 0.9fr);
   gap: 16px;
   align-items: center;
   padding: 12px 20px;
@@ -444,7 +448,7 @@ body {
 
 .program-row {
   display: grid;
-  grid-template-columns: 100px minmax(240px, 1.8fr) minmax(140px, 1fr) 128px minmax(140px, 0.9fr);
+  grid-template-columns: 112px minmax(240px, 1.8fr) minmax(140px, 1fr) 128px minmax(140px, 0.9fr);
   gap: 16px;
   align-items: center;
   padding: 16px 20px;
@@ -467,18 +471,25 @@ body {
 
 .col-status {
   display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
   align-items: center;
 }
 
 .badge {
   display: inline-flex;
   align-items: center;
+  gap: 3px;
   font-size: 0.75rem;
   font-weight: 700;
   line-height: 1.25;
   padding: 4px 10px;
   border-radius: 8px;
   white-space: nowrap;
+}
+
+.badge-icon {
+  font-size: 14px;
 }
 
 .badge-open {
@@ -489,6 +500,13 @@ body {
 .badge-closing {
   background-color: var(--status-closing-bg);
   color: var(--status-closing-ink);
+  border: 1px solid var(--status-closing-border);
+}
+
+.badge-new {
+  background-color: var(--status-new-bg);
+  color: var(--status-new-ink);
+  border: 1px solid var(--status-new-border);
 }
 
 .badge-always {
@@ -576,7 +594,7 @@ body {
 /* Loading Skeleton */
 .skeleton-row {
   display: grid;
-  grid-template-columns: 100px minmax(240px, 1.8fr) minmax(140px, 1fr) 128px minmax(140px, 0.9fr);
+  grid-template-columns: 112px minmax(240px, 1.8fr) minmax(140px, 1fr) 128px minmax(140px, 0.9fr);
   gap: 16px;
   align-items: center;
   padding: 18px 20px;

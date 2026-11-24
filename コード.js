@@ -192,6 +192,8 @@ function getPublicProgramsJson_() {
     .map(row => {
       const raw = rowToObject_(headers, row);
       const deadline = String(raw.deadline || '');
+      const updatedAtStr = String(raw.updatedAt || '');
+      const computedStatus = computeProgramStatus_(raw.status, deadline, todayStart);
       return {
         id: String(raw.id || ''),
         title: String(raw.title || ''),
@@ -201,10 +203,11 @@ function getPublicProgramsJson_() {
         targets: parseTargetsArray_(raw.targets),
         amount: String(raw.amount || ''),
         deadline: deadline,
-        status: computeProgramStatus_(raw.status, deadline, todayStart),
+        status: computedStatus,
+        isNew: computeIsNew_(computedStatus, updatedAtStr, todayStart),
         url: String(raw.url || ''),
         summary: String(raw.summary || ''),
-        updatedAt: String(raw.updatedAt || '')
+        updatedAt: updatedAtStr
       };
     })
     .reverse();
@@ -591,6 +594,7 @@ function dailyAutoCrawl() {
 
     const tRows = tSheet.getDataRange().getValues();
     if (tRows.length <= 1) {
+      invalidatePublicCache_();
       return { ok: true, addedCount: 0, targetResults: [] };
     }
 
@@ -1000,6 +1004,14 @@ function computeProgramStatus_(rawStatus, deadlineStr, todayStart) {
   if (diffDays < 0) return 'closed';
   if (diffDays <= CONFIG.CLOSING_SOON_DAYS) return 'closing_soon';
   return 'open';
+}
+
+function computeIsNew_(status, updatedAtStr, todayStart) {
+  if (status !== 'open' && status !== 'closing_soon') return false;
+  const parsedDate = parseDeadlineDate_(updatedAtStr);
+  if (!parsedDate) return false;
+  const diffDays = Math.floor((todayStart.getTime() - parsedDate.getTime()) / 86400000);
+  return diffDays >= 0 && diffDays <= 7;
 }
 
 function parseDeadlineDate_(deadlineStr) {

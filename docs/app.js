@@ -109,6 +109,7 @@ const PHASES = [
 const STATUS_OPTIONS = [
   { id: 'all', label: 'すべて' },
   { id: 'open', label: '公募中' },
+  { id: 'new', label: '新着' },
   { id: 'closing_soon', label: '締切間近' },
   { id: 'always', label: '通年募集' },
   { id: 'closed', label: '終了' }
@@ -433,13 +434,50 @@ function programMatchesTarget(program, selectedTarget) {
   return getProgramTargetCodes(program).includes(selectedTarget);
 }
 
+function parseUpdatedAtTimestamp(raw) {
+  if (typeof raw !== 'string') return NaN;
+  const m = raw.trim().match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if (!m) return NaN;
+  return Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+}
+
+function getTodayStartUtcForJst() {
+  const nowJst = new Date(Date.now() + 9 * 3600 * 1000);
+  return Date.UTC(nowJst.getUTCFullYear(), nowJst.getUTCMonth(), nowJst.getUTCDate());
+}
+
+function isProgramNew(program) {
+  const norm = normalizeStatus(program.status);
+  if (norm !== 'open' && norm !== 'closing_soon') return false;
+  const parsedUtc = parseUpdatedAtTimestamp(program.updatedAt);
+  if (Number.isNaN(parsedUtc)) return false;
+  const diffDays = Math.floor((getTodayStartUtcForJst() - parsedUtc) / 86400000);
+  return diffDays >= 0 && diffDays <= 7;
+}
+
+function createNewBadge() {
+  const badge = document.createElement('span');
+  badge.className = 'badge badge-new';
+  const icon = document.createElement('span');
+  icon.className = 'material-symbols-rounded badge-icon';
+  icon.setAttribute('aria-hidden', 'true');
+  icon.textContent = 'new_releases';
+  badge.appendChild(icon);
+  badge.appendChild(document.createTextNode('新着'));
+  return badge;
+}
+
 function matchesNonPhaseFilters(program) {
   if (state.selectedStatus !== 'all') {
-    const norm = normalizeStatus(program.status);
-    if (state.selectedStatus === 'open') {
-      if (norm !== 'closing_soon' && norm !== 'open' && norm !== 'always') return false;
-    } else if (norm !== state.selectedStatus) {
-      return false;
+    if (state.selectedStatus === 'new') {
+      if (!isProgramNew(program)) return false;
+    } else {
+      const norm = normalizeStatus(program.status);
+      if (state.selectedStatus === 'open') {
+        if (norm !== 'closing_soon' && norm !== 'open' && norm !== 'always') return false;
+      } else if (norm !== state.selectedStatus) {
+        return false;
+      }
     }
   }
 
@@ -618,6 +656,9 @@ function renderRows(items) {
     statusBadge.className = `badge ${statusMeta.className}`;
     statusBadge.textContent = statusMeta.label;
     statusCol.appendChild(statusBadge);
+    if (isProgramNew(item)) {
+      statusCol.appendChild(createNewBadge());
+    }
     row.appendChild(statusCol);
 
     // 2. 公募/制度名 + 実施機関/フェーズ
@@ -705,6 +746,10 @@ function openDrawer(program) {
   statusBadge.className = `badge ${statusMeta.className}`;
   statusBadge.textContent = statusMeta.label;
   els.drawerBadges.appendChild(statusBadge);
+
+  if (isProgramNew(program)) {
+    els.drawerBadges.appendChild(createNewBadge());
+  }
 
   const phaseLabel = program.phase && PHASE_LABEL_MAP[program.phase] ? PHASE_LABEL_MAP[program.phase] : '';
   if (phaseLabel) {
