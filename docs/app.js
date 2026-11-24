@@ -491,14 +491,28 @@ function renderFilterChips() {
   });
 }
 
+function createChipCheckIcon() {
+  const icon = document.createElement('span');
+  icon.className = 'material-symbols-rounded chip-check';
+  icon.setAttribute('aria-hidden', 'true');
+  icon.textContent = 'check';
+  return icon;
+}
+
 function renderChipGroup(container, options, activeId, onSelect) {
   container.textContent = '';
   options.forEach((opt) => {
+    const isActive = opt.id === activeId;
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'chip-btn' + (opt.id === activeId ? ' is-active' : '');
-    btn.setAttribute('aria-pressed', String(opt.id === activeId));
-    btn.textContent = opt.label;
+    btn.className = 'chip-btn' + (isActive ? ' is-active' : '');
+    btn.setAttribute('aria-pressed', String(isActive));
+    if (isActive) {
+      btn.appendChild(createChipCheckIcon());
+    }
+    const labelSpan = document.createElement('span');
+    labelSpan.textContent = opt.label;
+    btn.appendChild(labelSpan);
     btn.addEventListener('click', () => onSelect(opt.id));
     container.appendChild(btn);
   });
@@ -519,7 +533,12 @@ function renderPhaseFilters(baseFiltered) {
   const allActive = !state.selectedPhase;
   allBtn.className = 'chip-btn' + (allActive ? ' is-active' : '');
   allBtn.setAttribute('aria-pressed', String(allActive));
-  allBtn.textContent = 'すべて';
+  if (allActive) {
+    allBtn.appendChild(createChipCheckIcon());
+  }
+  const allLabel = document.createElement('span');
+  allLabel.textContent = 'すべて';
+  allBtn.appendChild(allLabel);
   const allCount = document.createElement('span');
   allCount.className = 'chip-count';
   allCount.textContent = String(baseFiltered.length);
@@ -536,6 +555,9 @@ function renderPhaseFilters(baseFiltered) {
     btn.type = 'button';
     btn.className = 'chip-btn' + (isActive ? ' is-active' : '');
     btn.setAttribute('aria-pressed', String(isActive));
+    if (isActive) {
+      btn.appendChild(createChipCheckIcon());
+    }
 
     const labelSpan = document.createElement('span');
     labelSpan.textContent = phase.label;
