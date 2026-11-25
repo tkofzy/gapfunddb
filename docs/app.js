@@ -363,12 +363,15 @@ function isSafeHttpUrl(rawUrl) {
   }
 }
 
-const STATUS_PRIORITY = {
-  closing_soon: 0,
-  open: 1,
-  always: 2,
-  closed: 3
-};
+function getSortPriority(program) {
+  if (isProgramNew(program)) return 0;
+  const norm = normalizeStatus(program.status);
+  if (norm === 'open') return 1;
+  if (norm === 'closing_soon') return 2;
+  if (norm === 'always') return 3;
+  if (norm === 'closed') return 4;
+  return 99;
+}
 
 function parseDeadlineTimestamp(raw) {
   if (typeof raw !== 'string') return Number.POSITIVE_INFINITY;
@@ -826,8 +829,8 @@ function render() {
     : baseFiltered;
 
   const finalItems = filtered.slice().sort((a, b) => {
-    const pa = STATUS_PRIORITY[normalizeStatus(a.status)] ?? 99;
-    const pb = STATUS_PRIORITY[normalizeStatus(b.status)] ?? 99;
+    const pa = getSortPriority(a);
+    const pb = getSortPriority(b);
     if (pa !== pb) return pa - pb;
     return parseDeadlineTimestamp(a.deadline) - parseDeadlineTimestamp(b.deadline);
   });
