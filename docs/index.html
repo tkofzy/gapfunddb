@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20,400,0,0" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=13">
+  <link rel="stylesheet" href="./styles.css?v=14">
 </head>
 <body>
   <!-- M3 Top App Bar -->
@@ -205,30 +205,90 @@
       </div>
 
       <div class="drawer-footer">
-        <a
-          id="drawerLink"
-          class="m3-filled-btn drawer-link-btn"
-          href="#"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <span>公式ページを開く</span>
-          <span class="material-symbols-rounded btn-icon" aria-hidden="true">open_in_new</span>
-        </a>
+        <div class="drawer-cta-wrap">
+          <a
+            id="drawerLink"
+            class="m3-filled-btn drawer-link-btn"
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <span>公式ページを開く</span>
+            <span class="material-symbols-rounded btn-icon" aria-hidden="true">open_in_new</span>
+          </a>
+          <p id="drawerLinkNote" class="drawer-link-note">※申請前に必ず公式サイトおよび所属機関の規則をご確認ください</p>
+        </div>
         <button type="button" id="drawerFooterCloseBtn" class="m3-outlined-btn">閉じる</button>
       </div>
     </aside>
   </div>
 
+  <!-- 免責事項モーダル -->
+  <div id="disclaimerModalOverlay" class="modal-overlay" hidden>
+    <div
+      id="disclaimerModal"
+      class="modal-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="disclaimerModalTitle"
+    >
+      <div class="modal-header">
+        <h2 id="disclaimerModalTitle" class="modal-title">免責事項</h2>
+        <button type="button" id="disclaimerCloseBtn" class="m3-icon-btn" aria-label="閉じる">
+          <span class="material-symbols-rounded" aria-hidden="true">close</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <section class="modal-section">
+          <h3>1. 運営主体について</h3>
+          <p>本ウェブサイト（以下「当サイト」）は、個人によって開発・運営されているものであり、運営者が所属する機関・団体等とは一切関係ありません。当サイトの内容や運営に関して、運営者の所属機関へのお問い合わせはご遠慮ください。</p>
+        </section>
+
+        <section class="modal-section">
+          <h3>2. 情報の正確性・最新性について</h3>
+          <p>当サイトに掲載されている公募情報・支援制度等のデータは、情報収集時点のものです。公募期間、要件、予算額等の内容は予告なく変更・終了される場合があり、最新かつ完全な情報であることを保証するものではありません。申請や利用を検討される際は、必ず各実施機関の公式ウェブサイトや公募要領等の一次情報をご参照ください。</p>
+        </section>
+
+        <section class="modal-section">
+          <h3>3. 所属機関の規則遵守について</h3>
+          <p>大学や研究機関等に所属されている方が当サイト掲載の制度へ申請・応募される場合は、必ずご自身の所属機関における申請手続き、研究倫理、知的財産、兼業等に関する諸規則に則り、担当部署の確認を得たうえで手続きを行ってください。</p>
+        </section>
+
+        <section class="modal-section">
+          <h3>4. 損害等の責任について</h3>
+          <p>当サイトの情報を利用したこと、または利用できなかったことによって生じたいかなる損害（申請の不備、機会損失、トラブル等を含む）についても、運営者は一切の責任を負いかねます。当サイトの利用は、利用者ご自身の責任において行ってください。</p>
+        </section>
+
+        <section class="modal-section">
+          <h3>5. 外部リンクについて</h3>
+          <p>当サイトからリンクやバナーなどによって他のサイトに移動された場合、移動先サイトで提供される情報、サービス等について運営者は一切の責任を負いません。</p>
+        </section>
+
+        <section class="modal-section">
+          <h3>6. コンテンツの変更・停止について</h3>
+          <p>当サイトの掲載内容や機能は、予告なく変更、追加、削除、または運営を停止する場合があります。あらかじめご了承ください。</p>
+        </section>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" id="disclaimerFooterCloseBtn" class="m3-outlined-btn">閉じる</button>
+      </div>
+    </div>
+  </div>
+
   <footer class="site-footer">
     <div class="container footer-inner">
       <!-- [EDIT] フッターの注記を変更してください -->
-      <p class="footer-note">※ 本ページに掲載された公募情報は自動巡回により収集しています。内容の誤りや変更が含まれる場合があります。正確な情報や最新情報は、必ず各WEBサイトの募集要項をご確認ください。</p>
-      <!-- [EDIT] 運営者名・著作権表記を変更してください -->
-      <p class="footer-copy">&copy; Takeo FUJII 2026</p>
+      <p class="footer-note">※本サイトは個人による開発・運営であり、運営者の所属機関とは一切関係ありません。掲載情報は収集時点のものであり、最新情報は必ず公式サイトをご確認ください。</p>
+      <div class="footer-bottom">
+        <!-- [EDIT] 運営者名・著作権表記を変更してください -->
+        <p class="footer-copy">&copy; Takeo FUJII 2026</p>
+        <button type="button" id="openDisclaimerBtn" class="footer-link-btn">免責事項</button>
+      </div>
     </div>
   </footer>
 
-  <script src="./app.js?v=13" defer></script>
+  <script src="./app.js?v=14" defer></script>
 </body>
 </html>

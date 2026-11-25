@@ -204,6 +204,13 @@ function cacheElements() {
   els.drawerSummaryWrap = document.getElementById('drawerSummaryWrap');
   els.drawerSummary = document.getElementById('drawerSummary');
   els.drawerLink = document.getElementById('drawerLink');
+  els.drawerLinkNote = document.getElementById('drawerLinkNote');
+
+  els.openDisclaimerBtn = document.getElementById('openDisclaimerBtn');
+  els.disclaimerModalOverlay = document.getElementById('disclaimerModalOverlay');
+  els.disclaimerModal = document.getElementById('disclaimerModal');
+  els.disclaimerCloseBtn = document.getElementById('disclaimerCloseBtn');
+  els.disclaimerFooterCloseBtn = document.getElementById('disclaimerFooterCloseBtn');
 }
 
 function bindEvents() {
@@ -241,8 +248,21 @@ function bindEvents() {
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !els.detailDrawerOverlay.hidden) {
-      closeDrawer();
+    if (e.key === 'Escape') {
+      if (!els.disclaimerModalOverlay.hidden) {
+        closeDisclaimerModal();
+      } else if (!els.detailDrawerOverlay.hidden) {
+        closeDrawer();
+      }
+    }
+  });
+
+  els.openDisclaimerBtn.addEventListener('click', openDisclaimerModal);
+  els.disclaimerCloseBtn.addEventListener('click', closeDisclaimerModal);
+  els.disclaimerFooterCloseBtn.addEventListener('click', closeDisclaimerModal);
+  els.disclaimerModalOverlay.addEventListener('click', (e) => {
+    if (e.target === els.disclaimerModalOverlay) {
+      closeDisclaimerModal();
     }
   });
 
@@ -833,10 +853,14 @@ function openDrawer(program) {
     els.drawerLink.href = program.url.trim();
     els.drawerLink.hidden = false;
     els.drawerLink.style.display = '';
+    els.drawerLinkNote.hidden = false;
+    els.drawerLinkNote.style.display = '';
   } else {
     els.drawerLink.removeAttribute('href');
     els.drawerLink.hidden = true;
     els.drawerLink.style.display = 'none';
+    els.drawerLinkNote.hidden = true;
+    els.drawerLinkNote.style.display = 'none';
   }
 
   els.detailDrawerOverlay.hidden = false;
@@ -855,6 +879,28 @@ function closeDrawer() {
   state.activeProgramId = null;
 
   render();
+
+  if (lastFocusedElement && typeof lastFocusedElement.focus === 'function' && document.contains(lastFocusedElement)) {
+    lastFocusedElement.focus();
+  }
+  lastFocusedElement = null;
+}
+
+function openDisclaimerModal() {
+  lastFocusedElement = document.activeElement;
+  els.disclaimerModalOverlay.hidden = false;
+  els.disclaimerModalOverlay.style.display = '';
+  document.body.style.overflow = 'hidden';
+  els.disclaimerCloseBtn.focus();
+}
+
+function closeDisclaimerModal() {
+  if (els.disclaimerModalOverlay.hidden) return;
+  els.disclaimerModalOverlay.hidden = true;
+  els.disclaimerModalOverlay.style.display = 'none';
+  if (els.detailDrawerOverlay.hidden) {
+    document.body.style.overflow = '';
+  }
 
   if (lastFocusedElement && typeof lastFocusedElement.focus === 'function' && document.contains(lastFocusedElement)) {
     lastFocusedElement.focus();
