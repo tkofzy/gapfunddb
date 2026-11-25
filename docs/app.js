@@ -364,12 +364,15 @@ function isSafeHttpUrl(rawUrl) {
 }
 
 function getSortPriority(program) {
-  if (isProgramNew(program)) return 0;
   const norm = normalizeStatus(program.status);
-  if (norm === 'open') return 1;
-  if (norm === 'closing_soon') return 2;
-  if (norm === 'always') return 3;
-  if (norm === 'closed') return 4;
+  if (isProgramNew(program)) {
+    if (norm === 'open') return 0;
+    if (norm === 'closing_soon') return 1;
+  }
+  if (norm === 'open') return 2;
+  if (norm === 'closing_soon') return 3;
+  if (norm === 'always') return 4;
+  if (norm === 'closed') return 5;
   return 99;
 }
 
