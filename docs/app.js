@@ -717,13 +717,13 @@ function renderRows(items) {
     // 1. ステータスバッジ
     const statusCol = document.createElement('div');
     statusCol.className = 'col-status';
+    if (isProgramNew(item)) {
+      statusCol.appendChild(createNewBadge());
+    }
     const statusBadge = document.createElement('span');
     statusBadge.className = `badge ${statusMeta.className}`;
     statusBadge.textContent = statusMeta.label;
     statusCol.appendChild(statusBadge);
-    if (isProgramNew(item)) {
-      statusCol.appendChild(createNewBadge());
-    }
     row.appendChild(statusCol);
 
     // 2. 公募/制度名 + 実施機関/フェーズ
@@ -807,14 +807,14 @@ function openDrawer(program) {
 
   els.drawerBadges.textContent = '';
 
+  if (isProgramNew(program)) {
+    els.drawerBadges.appendChild(createNewBadge());
+  }
+
   const statusBadge = document.createElement('span');
   statusBadge.className = `badge ${statusMeta.className}`;
   statusBadge.textContent = statusMeta.label;
   els.drawerBadges.appendChild(statusBadge);
-
-  if (isProgramNew(program)) {
-    els.drawerBadges.appendChild(createNewBadge());
-  }
 
   const phaseLabel = program.phase && PHASE_LABEL_MAP[program.phase] ? PHASE_LABEL_MAP[program.phase] : '';
   if (phaseLabel) {
