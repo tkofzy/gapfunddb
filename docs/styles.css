@@ -335,6 +335,19 @@ body {
   background-color: #C2D7FC;
 }
 
+#statusFilters .chip-btn {
+  width: 112px;
+  height: 32px;
+  justify-content: center;
+  padding: 0 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+#statusFilters .chip-btn.is-active {
+  padding: 0 8px;
+}
+
 .chip-check {
   font-size: 18px;
   color: var(--md-sys-color-on-primary-container);
