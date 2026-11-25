@@ -166,6 +166,8 @@ function cacheElements() {
   els.lastUpdatedText = document.getElementById('lastUpdatedText');
   els.demoBanner = document.getElementById('demoBanner');
   els.demoBannerText = document.getElementById('demoBannerText');
+  els.newsBanner = document.getElementById('newsBanner');
+  els.newsBannerText = document.getElementById('newsBannerText');
   els.searchInput = document.getElementById('searchInput');
   els.clearSearchBtn = document.getElementById('clearSearchBtn');
   els.statusFilters = document.getElementById('statusFilters');
@@ -303,6 +305,7 @@ async function loadPrograms() {
       els.demoBanner.hidden = true;
     }
 
+    renderNewsBanner(state.programs, state.lastUpdated);
     render();
   } catch (err) {
     els.resultsCount.textContent = '0件が該当';
@@ -310,6 +313,42 @@ async function loadPrograms() {
       '通信環境をご確認のうえ、しばらくしてから再度お試しください。';
     setViewState('error');
   }
+}
+
+function extractYmdDate(raw) {
+  if (typeof raw !== 'string') return '';
+  const m = raw.trim().match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if (!m) return '';
+  return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+}
+
+function getTodayYmdJst() {
+  const nowJst = new Date(Date.now() + 9 * 3600 * 1000);
+  const y = nowJst.getUTCFullYear();
+  const m = String(nowJst.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(nowJst.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function renderNewsBanner(programs, lastUpdated) {
+  const targetDate = extractYmdDate(lastUpdated) || getTodayYmdJst();
+  const todayNewCount = programs.filter(p => {
+    return isProgramNew(p) && extractYmdDate(p.updatedAt) === targetDate;
+  }).length;
+
+  els.newsBannerText.textContent = '';
+  els.newsBannerText.appendChild(document.createTextNode('本日の新着情報は '));
+  const strong = document.createElement('strong');
+  if (todayNewCount > 0) {
+    strong.textContent = String(todayNewCount);
+    els.newsBannerText.appendChild(strong);
+    els.newsBannerText.appendChild(document.createTextNode(' 件です。'));
+  } else {
+    strong.textContent = '0件';
+    els.newsBannerText.appendChild(strong);
+    els.newsBannerText.appendChild(document.createTextNode(' です。'));
+  }
+  els.newsBanner.hidden = false;
 }
 
 function setViewState(mode) {
